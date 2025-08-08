@@ -1,0 +1,127 @@
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  font-family: sans-serif;
+}
+
+.app-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 24px;
+  color: #333;
+  border-bottom: 2px solid #ccc;
+  padding-bottom: 8px;
+}
+
+
+.page-content {
+  flex: 1;
+  padding: 1rem;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .section-title {
+    flex-basis: 100%;
+  }
+
+  .menu-item {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .page-content {
+    padding: 0.5rem;
+  }
+}
+
+.page {
+  font-family: Arial, sans-serif;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+.buttons-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.apply-button {
+  padding: 0.5rem 1rem;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.apply-button:hover {
+  background-color: #115293;
+}
+
+.add-button {
+  padding: 0.5rem 1rem;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.add-button:hover {
+  background-color: #357a38;
+}
+
+.archive-button {
+  padding: 0.5rem 1rem;
+  background-color: #ffc107;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.archive-button:hover {
+  background-color: #ffc720;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  border-bottom: 1px solid #ccc;
+  padding: 0.5rem;
+  text-align: left;
+  background-color: #f9f9f9;
+}
+
+tbody td {
+  border-bottom: 1px solid #eee;
+  padding: 0.5rem;
+}
