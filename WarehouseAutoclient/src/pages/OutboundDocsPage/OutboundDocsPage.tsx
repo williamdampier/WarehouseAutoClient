@@ -46,9 +46,42 @@ const headers: Header[] = [
 
 
 const OutboundDocsPage = () => {
+    const {
+        units,
+        loading: unitsLoading,
+        error: unitsError,
+        refetch: refetchUnits
+    } = useFetchUnits();
+    const {
+        resources,
+        loading: resourcesLoading,
+        error: resourcesError,
+        refetch: refetchResources
+    } = useFetchResources();
+
+    const {
+        customers,
+        loading: customersLoading,
+        error: customersError,
+        refetch: refetchCustomers
+    } = useFetchCustomers();
+
+
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
+    const refetch = useCallback(() => {
+        refetchUnits();
+        refetchResources();
+    }, [refetchUnits, refetchResources]);
+
     const [documents, setDocuments] = useState<OutboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+
+
 
     // Filters state
     const [selectedCustomers, setSelectedCustomers] = useState<Option[]>([]);
@@ -57,23 +90,19 @@ const OutboundDocsPage = () => {
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
 
-    const { resources, loading: resourcesLoading, error: resourcesError } = useFetchResources();
-    const { units, loading: unitsLoading, error: unitsError } = useFetchUnits();
-    const { customers, loading: customersLoading, error: customersError } = useFetchCustomers();
-
     // Convert Resource and Unit arrays to Option[] for MultiSelect
     const resourceOptions: Option[] = resources.map((r: Resource) => ({
-        value: r.Id ?? r.Name, // fallback to Name if Id missing
-        label: r.Name,
+        value: r.id ?? r.name, // fallback to Name if Id missing
+        label: r.name,
     }));
     const unitOptions: Option[] = units.map((u: Unit) => ({
-        value: u.Id ?? u.Name,
-        label: u.Name,
+        value: u.id ?? u.name,
+        label: u.name,
     }));
 
     const customersOptions: Option[] = customers.map((u: Customer) => ({
-        value: u.Id ?? u.Name,
-        label: u.Name,
+        value: u.id ?? u.name,
+        label: u.name,
     }));
 
     // Fetch documents from API
@@ -108,37 +137,37 @@ const OutboundDocsPage = () => {
         ? documents.filter((doc) => {
             // Here you need to match doc.CustomerId to selected customers by value (assuming value = customer Id)
             const selectedCustomerIds = selectedCustomers.map((c) => c.value);
-            return selectedCustomerIds.includes(doc.CustomerId);
+            return selectedCustomerIds.includes(doc.customerId);
         })
         : documents;
 
     // Prepare rows for Grid
     const rows = filteredDocs.map((doc) => {
-        const resourceNames = doc.Resources
+        const resourceNames = doc.resources
             .map((r: OutboundResource) => {
-                const opt = resourceOptions.find((o) => o.value === r.ResourceId);
-                return opt ? opt.label : r.ResourceId;
+                const opt = resourceOptions.find((o) => o.value === r.resourceId);
+                return opt ? opt.label : r.resourceId;
             })
             .join(", ");
 
-        const unitNames = doc.Resources
+        const unitNames = doc.resources
             .map((r: OutboundResource) => {
-                const opt = unitOptions.find((o) => o.value === r.UnitId);
-                return opt ? opt.label : r.UnitId;
+                const opt = unitOptions.find((o) => o.value === r.unitId);
+                return opt ? opt.label : r.unitId;
             })
             .join(", ");
 
-        const totalQuantity = doc.Resources.reduce((sum: number, r: OutboundResource) => sum + r.Quantity, 0);
+        const totalQuantity = doc.resources.reduce((sum: number, r: OutboundResource) => sum + r.quantity, 0);
 
         // Find customer name from dummy list or fallback
-        const customer = customersOptions.find((c) => c.value === doc.CustomerId);
+        const customer = customersOptions.find((c) => c.value === doc.customerId);
 
         return {
-            id: doc.Id ?? doc.DocumentNumber,
-            DocumentNumber: doc.DocumentNumber,
-            DateShipped: doc.DateShipped.slice(0, 10),
-            CustomerName: customer?.label ?? doc.CustomerId,
-            StatusButton: getStatusButton(doc.Status),
+            id: doc.id ?? doc.documentNumber,
+            DocumentNumber: doc.documentNumber,
+            DateShipped: doc.dateShipped.slice(0, 10),
+            CustomerName: customer?.label ?? doc.customerId,
+            StatusButton: getStatusButton(doc.status),
             Resources: resourceNames,
             Units: unitNames,
             Quantity: totalQuantity.toString(),

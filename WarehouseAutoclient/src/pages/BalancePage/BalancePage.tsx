@@ -28,6 +28,14 @@ const BalancePage = () => {
     } = useFetchResources();
 
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
+    const refetch = useCallback(() => {
+        refetchUnits();
+        refetchResources();
+    }, [refetchUnits, refetchResources]);
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedResources, setSelectedResources] = useState<Option[]>([])
@@ -35,10 +43,6 @@ const BalancePage = () => {
 
     const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
     const [unitOptions, setUnitOptions] = useState<Option[]>([]);
-
-
-
-
 
     // Fetch balances from API with current filters
     const fetchBalances = useCallback(async () => {
@@ -51,9 +55,11 @@ const BalancePage = () => {
             }
             const data = await getBalances(request)
             setBalances(data)
-        } catch (e: unknown) {
-            if (e instanceof Error) setError(e.message)
-            else setError('Неизвестная ошибка')
+        } catch (error) {
+            console.error("Archive failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to archive unit", "error");
+
         } finally {
             setLoading(false)
         }
@@ -89,7 +95,12 @@ const BalancePage = () => {
     return (
         <div className="page">
             <h1>Баланс</h1>
-
+            {toast && (
+                <div className={`toast ${toast.type}`}>
+                    {toast.message}
+                    <button onClick={() => setToast(null)}>Закрыть</button>
+                </div>
+            )}
             <div className="filters">
                 <div className="filter-group">
                     <label>Ресурс</label>
@@ -113,8 +124,12 @@ const BalancePage = () => {
 
             </div>
 
-            {loading && <p>Загрузка...</p>}
-            {error && <p style={{ color: 'red' }}>Ошибка: {error}</p>}
+
+            {(loading || resourcesLoading || unitsLoading) && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError.message}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {resourcesError.message}</p>}
+
 
             {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
