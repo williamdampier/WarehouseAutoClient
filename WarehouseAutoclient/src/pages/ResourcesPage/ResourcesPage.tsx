@@ -4,6 +4,7 @@ import type { FieldConfig, Resource } from "../../app/types";
 import { useState } from "react";
 import { archiveResource, createResource, deleteResource, updateResource } from "../../app/api/Dictionaries/resourcesApi";
 import ActionPopup from "../../components/ActionPopup/ActionPopup";
+import Toast from "../../components/Toast/Toast";
 
 
 const headers: Header[] = [
@@ -30,6 +31,11 @@ const ResourcesPage = () => {
 
     const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
     const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
 
     const handleRowClick = async (selectedResource: Resource) => {
         setSelectedResource(selectedResource);
@@ -38,43 +44,81 @@ const ResourcesPage = () => {
 
 
     const handleCreate = async (newResource: Resource) => {
-        console.log("Creating Resource:", newResource);
-        createResource(newResource);
-        setPopupMode("create")
-        refetch();
-    };
+        try {
+            await createResource(newResource);
+            showToast("Resource created successfully", "success");
+        } catch (error) {
+            console.error("Create Resource failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to create Resource", "error");
+        }
+        finally {
+            setPopupMode(null)
+            refetch();
+        };
+    }
+
 
     const handleSave = async (updatedResource: Resource) => {
-        console.log("Saving Resource:", updatedResource);
-        if (updatedResource.id) {
-            updateResource(updatedResource.id, updatedResource);
-        } else {
-            console.error("Resource id is missing.");
+        try {
+            if (updatedResource.id) {
+                await updateResource(updatedResource.id, updatedResource);
+                showToast("Resource updated successfully", "success");
+            } else {
+                console.error("Resource id is missing.");
+                showToast("Resource id is missing.", "error");
+            }
+        } catch (error) {
+            console.error("Create Resource failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to create Resource", "error");
         }
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleDelete = async (resourceToDelete: Resource) => {
-        console.log("Deleting Resource:", resourceToDelete);
-        if (resourceToDelete.id) {
-            deleteResource(resourceToDelete.id);
-        } else {
-            console.error("Resource id is missing.");
+        try {
+            if (resourceToDelete.id) {
+                await deleteResource(resourceToDelete.id);
+                showToast("Resource deleted successfully", "success");
+            } else {
+                console.error("Resource id is missing.");
+                showToast("Unit ID is missing", "error");
+            }
+        } catch (error) {
+            console.error("Delete failed:", error);
+            showToast(
+                error instanceof Error ? error.message :
+                    "Failed to delete Resource", "error"
+            );
         }
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleArchive = async (resourceToArchive: Resource) => {
-        console.log("Archiving Resource:", resourceToArchive);
-        if (resourceToArchive.id) {
-            archiveResource(resourceToArchive.id);
-        } else {
-            console.error("Resource id is missing.");
+        try {
+            if (resourceToArchive.id) {
+                await archiveResource(resourceToArchive.id);
+                showToast("Resource archived successfully", "success");
+            } else {
+                console.error("Resource id is missing.");
+                showToast("Resource ID is missing", "error");
+            }
+        } catch (error) {
+            console.error("Archive failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to archive Resource", "error");
         }
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null);
+            refetch();
+        }
     };
 
     const handleClosePopup = () => {
@@ -86,6 +130,14 @@ const ResourcesPage = () => {
     return (
         <div className="page">
             <h1>Ресурсы</h1>
+
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
 
             <div className="buttons-container">
                 {archived ? (

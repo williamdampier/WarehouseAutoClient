@@ -4,6 +4,7 @@ import ActionPopup from "../../components/ActionPopup/ActionPopup";
 import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 import type { FieldConfig, Unit } from "../../app/types";
 import { archiveUnit, createUnit, deleteUnit, updateUnit } from "../../app/api/Dictionaries/unitsApi";
+import Toast from "../../components/Toast/Toast";
 
 
 const headers: Header[] = [
@@ -30,6 +31,11 @@ const UnitsPage = () => {
 
     const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
     const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
 
     const handleRowClick = async (selectedUnit: Unit) => {
         setSelectedUnit(selectedUnit);
@@ -38,46 +44,81 @@ const UnitsPage = () => {
 
 
     const handleCreate = async (newUnit: Unit) => {
-        console.log("Creating unit:", newUnit);
-        createUnit(newUnit);
-        setPopupMode("create")
-        refetch();
+        try {
+            await createUnit(newUnit);
+            showToast("Unit created successfully", "success");
+        } catch (error) {
+            console.error("Create unit failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to create unit", "error");
+        }
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleSave = async (updatedUnit: Unit) => {
-        console.log("Saving unit:", updatedUnit);
-        if (updatedUnit.id) {
-            updateUnit(updatedUnit.id, updatedUnit);
-        } else {
-            console.error("Unit id is missing.");
+        try {
+            if (updatedUnit.id) {
+                await updateUnit(updatedUnit.id, updatedUnit);
+                showToast("Unit updated successfully", "success");
+            } else {
+                console.error("Unit id is missing.");
+                showToast("Unit id is missing.", "error");
+            }
+        } catch (error) {
+            console.error("Create unit failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to create unit", "error");
         }
-
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleDelete = async (unitToDelete: Unit) => {
-        console.log("Deleting unit:", unitToDelete);
-        if (unitToDelete.id) {
-            deleteUnit(unitToDelete.id);
-        } else {
-            console.error("Unit id is missing.");
+        try {
+            if (unitToDelete.id) {
+                await deleteUnit(unitToDelete.id);
+                showToast("Unit deleted successfully", "success");
+            }
+            else {
+                console.error("Unit id is missing.");
+                showToast("Unit ID is missing", "error");
+            }
+        } catch (error) {
+            console.error("Delete failed:", error);
+            showToast(
+                error instanceof Error ? error.message :
+                    "Failed to delete unit", "error"
+            );
         }
-
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleArchive = async (unitToArchive: Unit) => {
-        console.log("Archiving unit:", unitToArchive);
-        if (unitToArchive.id) {
-            archiveUnit(unitToArchive.id);
-        } else {
-            console.error("Unit id is missing.");
+        try {
+            if (unitToArchive.id) {
+                await archiveUnit(unitToArchive.id);
+                showToast("Unit archived successfully", "success");
+            } else {
+                console.error("Unit id is missing.");
+                showToast("Unit ID is missing", "error");
+            }
+        } catch (error) {
+            console.error("Archive failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to archive unit", "error");
         }
-
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null);
+            refetch();
+        }
     };
 
     const handleClosePopup = () => {
@@ -89,6 +130,13 @@ const UnitsPage = () => {
     return (
         <div className="page">
             <h1>Единицы измерения</h1>
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
 
             <div className="buttons-container">
                 {archived ? (
