@@ -1,49 +1,49 @@
-import { useEffect, useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Unit } from "../types";
 import { getUnits } from "../api/Dictionaries/unitsApi";
 
-// Hook for fetching units
+const REFETCH_TIMEOUT = import.meta.env.VITE_REFETCH_TIMEOUT || 300; //default wait 300ms before refetching
+
 export function useFetchUnits(initialArchived: boolean = false) {
     const [units, setUnits] = useState<Unit[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<Error | null>(null);
     const [archived, setArchived] = useState(initialArchived);
 
-    const fetchUnits = async () => {
+    const fetchUnits = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
             const data = await getUnits(archived);
             setUnits(data);
-        } catch (e) {
-            setError(e instanceof Error ? e.message : "Unknown error");
+        } catch (err) {
+            setError(err as Error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [archived]);
 
     useEffect(() => {
-        const fetch = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const data = await getUnits(archived);
-                setUnits(data);
-            } catch (e) {
-                setError(e instanceof Error ? e.message : "Unknown error");
-            } finally {
-                setLoading(false);
+        fetchUnits();
+    }, [fetchUnits]);
+
+    const refetch = useCallback(
+        async (delayMs: number = REFETCH_TIMEOUT) => {
+            if (delayMs > 0) {
+                await new Promise(res => setTimeout(res, delayMs));
             }
-        };
-        fetch();
-    }, [archived]);
+            await fetchUnits();
+        },
+        [fetchUnits]
+    );
+
 
     return {
         units,
         loading,
         error,
-        refetch: fetchUnits,
         archived,
         setArchived,
-    }
+        refetch
+    };
 }

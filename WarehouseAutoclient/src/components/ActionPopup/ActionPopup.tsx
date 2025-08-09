@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./ActionPopup.css";
 import type { FieldConfig } from "../../app/types";
 
@@ -33,12 +33,30 @@ function ActionPopup<T extends object>({
     const [error, setError] = useState("");
 
     const [formData, setFormData] = useState<T>(() => data ? { ...data } : {} as T);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (data) {
             setFormData({ ...data });
         }
     }, [data]);
+
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                containerRef.current &&
+                !containerRef.current.contains(event.target as Node)
+            ) {
+                onClose();
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [onClose]);
 
     const handleAction = async (
         action: "save" | "delete" | "archive",
@@ -65,7 +83,7 @@ function ActionPopup<T extends object>({
 
     return (
         <div className="popup-overlay">
-            <div className="popup-container">
+            <div className="popup-container" ref={containerRef}>
                 <h2>{title}</h2>
                 {error && <p className="error-text">{error}</p>}
 

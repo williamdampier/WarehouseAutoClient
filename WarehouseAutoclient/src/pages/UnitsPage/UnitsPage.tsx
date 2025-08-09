@@ -19,9 +19,9 @@ const UnitsPage = () => {
         units,
         loading,
         error,
-        refetch,
         archived,
         setArchived,
+        refetch
     } = useFetchUnits();
 
     const handleToggleArchive = () => {
@@ -29,42 +29,46 @@ const UnitsPage = () => {
     };
 
     const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
-    const [showPopup, setShowPopup] = useState(false);
-    const [creating, setCreating] = useState(false);
+    const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
 
     const handleRowClick = async (selectedUnit: Unit) => {
         setSelectedUnit(selectedUnit);
-        setShowPopup(true);
+        setPopupMode("edit")
     };
 
 
     const handleCreate = async (newUnit: Unit) => {
         console.log("Creating unit:", newUnit);
         createUnit(newUnit);
-        setShowPopup(false);
+        setPopupMode("create")
         refetch();
     };
 
     const handleSave = async (updatedUnit: Unit) => {
         console.log("Saving unit:", updatedUnit);
         updateUnit(updatedUnit.id, updatedUnit);
-        setShowPopup(false);
+        setPopupMode(null)
         refetch();
     };
 
     const handleDelete = async (unitToDelete: Unit) => {
         console.log("Deleting unit:", unitToDelete);
         deleteUnit(unitToDelete.id);
-        setShowPopup(false);
+        setPopupMode(null)
         refetch();
     };
 
     const handleArchive = async (unitToArchive: Unit) => {
         console.log("Archiving unit:", unitToArchive);
         archiveUnit(unitToArchive.id);
-        setShowPopup(false);
+        setPopupMode(null)
         refetch();
     };
+
+    const handleClosePopup = () => {
+        setPopupMode(null);
+        setSelectedUnit(null);
+    }
 
 
     return (
@@ -80,10 +84,7 @@ const UnitsPage = () => {
                     <>
                         <button
                             className="apply-button"
-                            onClick={() => {
-                                setCreating(true);
-                                setShowPopup(true);
-                            }}
+                            onClick={() => setPopupMode("create")}
                         >
                             Добавить
                         </button>
@@ -97,25 +98,25 @@ const UnitsPage = () => {
                 )}
             </div>
             {loading && <p>Загрузка...</p>}
-            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error.message}</p>}
 
             {
                 !loading && !error &&
                 <Grid
                     headers={headers}
                     rows={units}
-                    onRowClick={(unit) => handleRowClick(unit)}
+                    onRowClick={archived ? undefined : (unit) => handleRowClick(unit)}
                 />
             }
 
             {
-                showPopup && selectedUnit && (
+                popupMode === "edit" && selectedUnit && (
                     <ActionPopup<Unit>
                         title={`Редактировать: ${selectedUnit.name}`}
                         fields={unitFields}
                         data={selectedUnit}
                         showArchive={true}
-                        onClose={() => setShowPopup(false)}
+                        onClose={handleClosePopup}
                         onSave={handleSave}
                         onDelete={handleDelete}
                         onArchive={handleArchive}
@@ -124,12 +125,12 @@ const UnitsPage = () => {
             }
 
             {
-                showPopup && creating && (
+                popupMode === "create" && (
                     <ActionPopup<Unit>
                         title={`Создать: Новая единица измерения}`}
                         fields={unitFields}
                         showArchive={false}
-                        onClose={() => { setShowPopup(false); setCreating(false); }}
+                        onClose={handleClosePopup}
                         onSave={handleCreate}
                     />
                 )

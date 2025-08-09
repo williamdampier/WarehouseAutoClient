@@ -25,6 +25,6 @@ export const deleteUnit = (id: string) =>
     });
 
 export const archiveUnit = (id: string) =>
-    apiFetch<void>("dictionaries", `/units/${id}/archive`, {
+    apiFetch<void>("dictionaries", `/units/${id}`, {
         method: "PATCH",
     });
