@@ -2,46 +2,52 @@ import { useEffect, useState, useCallback } from "react"
 import type { Balance, BalanceRequest, Option } from "../../app/types"
 import { getBalances } from "../../app/api/Warehouse/balancesApi"
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect"
-import Grid from "../../components/Grid/Grid"
+import Grid, { type Header } from "../../components/Grid/Grid"
+import { useFetchUnits } from "../../app/hooks/useFetchUnits"
+import { useFetchResources } from "../../app/hooks/useFetchResources"
 
-
-// Dummy options — ideally fetched from API/dictionaries
-const resourceOptions: Option[] = [
-    { value: 'opt1', label: 'Опция 1' },
-    { value: 'opt2', label: 'Опция 2' },
-    { value: 'opt3', label: 'Опция 3' },
-]
-
-const unitOptions: Option[] = [
-    { value: 'cat1', label: 'Категория 1' },
-    { value: 'cat2', label: 'Категория 2' },
-    { value: 'cat3', label: 'Категория 3' },
-]
-
-const headers = [
-    { label: 'Номер', accessor: 'Number' },
-    { label: 'Ресурс', accessor: 'Resource' },
-    { label: 'Единица измерения', accessor: 'Unit' },
-    { label: 'Количество', accessor: 'Quantity' },
-]
+const headers: Header[] = [
+    { label: "Ресурс", accessor: "resource" },
+    { label: "Единица Измерения", accessor: "unit" },
+    { label: "Количество", accessor: "quantity" }
+];
 
 const BalancePage = () => {
-    const [balances, setBalances] = useState<Balance[]>([])
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const [balances, setBalances] = useState<Balance[]>([]);
+    const {
+        units,
+        loading: unitsLoading,
+        error: unitsError,
+        refetch: refetchUnits
+    } = useFetchUnits();
+    const {
+        resources,
+        loading: resourcesLoading,
+        error: resourcesError,
+        refetch: refetchResources
+    } = useFetchResources();
 
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [selectedResources, setSelectedResources] = useState<Option[]>([])
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([])
+
+    const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
+    const [unitOptions, setUnitOptions] = useState<Option[]>([]);
+
+
+
+
 
     // Fetch balances from API with current filters
     const fetchBalances = useCallback(async () => {
         setLoading(true)
         setError(null)
         try {
-            // Build request with selected filter IDs (value = id)
             const request: BalanceRequest = {
-                ResourceFilterIds: selectedResources.map((r) => r.value),
-                UnitFilterIds: selectedUnits.map((u) => u.value),
+                resourceFilterIds: selectedResources.map((r) => r.value),
+                unitFilterIds: selectedUnits.map((u) => u.value),
             }
             const data = await getBalances(request)
             setBalances(data)
@@ -58,16 +64,25 @@ const BalancePage = () => {
         fetchBalances()
     }, [fetchBalances])
 
+    useEffect(() => {
+        const unitOptions: Option[] = units.map((u) => { return { value: u.id || "", label: u.name } })
+        setUnitOptions(unitOptions)
+    }, [units]);
+
+    useEffect(() => {
+        const resourceOptions: Option[] = resources.map((r) => { return { value: r.id || "", label: r.name } })
+        setResourceOptions(resourceOptions)
+    }, [resources])
+
     // Map API data to grid rows, including resource/unit labels from options
     const rows = balances.map((bal, index) => {
-        const resourceLabel = resourceOptions.find((r) => r.value === bal.ResourceId)?.label ?? bal.ResourceId
-        const unitLabel = unitOptions.find((u) => u.value === bal.UnitId)?.label ?? bal.UnitId
+        const resourceLabel = resources.find((r) => r.id === bal.resourceId)?.name ?? bal.resourceId
+        const unitLabel = units.find((u) => u.id === bal.unitId)?.name ?? bal.unitId
         return {
-            id: `${bal.ResourceId}_${bal.UnitId}_${index}`, // unique id
-            Number: index + 1,
-            Resource: resourceLabel,
-            Unit: unitLabel,
-            Quantity: bal.Quantity.toString(),
+            id: `${bal.resourceId}_${bal.unitId}_${index}`, // unique id
+            resource: resourceLabel,
+            unit: unitLabel,
+            quantity: bal.quantity.toString(),
         }
     })
 
@@ -96,9 +111,6 @@ const BalancePage = () => {
                     />
                 </div>
 
-                <div className="apply-button-container">
-                    <button onClick={fetchBalances}>Применить</button>
-                </div>
             </div>
 
             {loading && <p>Загрузка...</p>}
