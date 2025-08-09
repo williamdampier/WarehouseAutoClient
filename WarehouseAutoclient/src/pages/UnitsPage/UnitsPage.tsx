@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import Grid, { type Header } from "../../components/Grid/Grid";
-import type { Unit } from "../../app/types";
-
+import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 
 const headers: Header[] = [
     { label: "Название", accessor: "Name" },
@@ -11,32 +9,7 @@ const headers: Header[] = [
 ];
 
 const UnitsPage = () => {
-    const [units, setUnits] = useState<Unit[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchUnits = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dictionaries/units?status=1`);
-            if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
-            const data: Unit[] = await res.json();
-            setUnits(data);
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                setError(e.message);
-            } else {
-                setError("Неизвестная ошибка");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchUnits();
-    }, []);
+    const { units, loading, error } = useFetchUnits();
 
     // Добавляем id (обязательное поле) и удобный статус для отображения
     const rows = units.map((u) => ({

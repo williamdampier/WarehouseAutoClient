@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Option, OutboundDocument, OutboundResource } from "../../app/types";
+import type { Customer, Option, OutboundDocument, OutboundResource, Resource, Unit } from "../../app/types";
 import type { Header } from "../../components/Grid/Grid";
 import { getOutboundDocuments } from "../../app/api/Warehouse/outboundDocumentsApi";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
 import Grid from "../../components/Grid/Grid";
+import { useFetchResources } from "../../app/hooks/useFetchResources";
+import { useFetchUnits } from "../../app/hooks/useFetchUnits";
+import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
 
 // Helper to render status button with colors
 const getStatusButton = (statusNum: number) => {
@@ -41,22 +44,6 @@ const headers: Header[] = [
     { label: "Количество", accessor: "Quantity" },
 ];
 
-// Dummy options for resources, units, customers - replace with real API calls or dictionary
-const resourceOptions: Option[] = [
-    { value: "res1", label: "Ресурс 1" },
-    { value: "res2", label: "Ресурс 2" },
-    { value: "res3", label: "Ресурс 3" },
-];
-const unitOptions: Option[] = [
-    { value: "unit1", label: "Ед. измерения 1" },
-    { value: "unit2", label: "Ед. измерения 2" },
-    { value: "unit3", label: "Ед. измерения 3" },
-];
-const customerOptions: Option[] = [
-    { value: "cust1", label: "Клиент 1" },
-    { value: "cust2", label: "Клиент 2" },
-    { value: "cust3", label: "Клиент 3" },
-];
 
 const OutboundDocsPage = () => {
     const [documents, setDocuments] = useState<OutboundDocument[]>([]);
@@ -69,6 +56,25 @@ const OutboundDocsPage = () => {
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([]);
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
+
+    const { resources, loading: resourcesLoading, error: resourcesError } = useFetchResources();
+    const { units, loading: unitsLoading, error: unitsError } = useFetchUnits();
+    const { customers, loading: customersLoading, error: customersError } = useFetchCustomers();
+
+    // Convert Resource and Unit arrays to Option[] for MultiSelect
+    const resourceOptions: Option[] = resources.map((r: Resource) => ({
+        value: r.Id ?? r.Name, // fallback to Name if Id missing
+        label: r.Name,
+    }));
+    const unitOptions: Option[] = units.map((u: Unit) => ({
+        value: u.Id ?? u.Name,
+        label: u.Name,
+    }));
+
+    const customersOptions: Option[] = customers.map((u: Customer) => ({
+        value: u.Id ?? u.Name,
+        label: u.Name,
+    }));
 
     // Fetch documents from API
     const fetchDocuments = useCallback(async () => {
@@ -125,7 +131,7 @@ const OutboundDocsPage = () => {
         const totalQuantity = doc.Resources.reduce((sum: number, r: OutboundResource) => sum + r.Quantity, 0);
 
         // Find customer name from dummy list or fallback
-        const customer = customerOptions.find((c) => c.value === doc.CustomerId);
+        const customer = customersOptions.find((c) => c.value === doc.CustomerId);
 
         return {
             id: doc.Id ?? doc.DocumentNumber,
@@ -154,7 +160,7 @@ const OutboundDocsPage = () => {
                 <div className="filter-group">
                     <label>Клиенты</label>
                     <MultiSelect
-                        options={customerOptions}
+                        options={customersOptions}
                         selected={selectedCustomers}
                         onChange={setSelectedCustomers}
                         placeholder="Выберите клиентов"
@@ -182,10 +188,14 @@ const OutboundDocsPage = () => {
                 </div>
             </div>
 
-            {loading && <p>Загрузка...</p>}
+            {(loading || resourcesLoading || unitsLoading || customersLoading) && <p>Загрузка...</p>}
             {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {unitsError}</p>}
+            {customersError && <p style={{ color: "red" }}>Ошибка загрузки клиентов: {customersError}</p>}
 
-            {!loading && !error && <Grid headers={headers} rows={rows} />}
+
+            {(!loading && !error && !unitsError && !resourcesError) && <Grid headers={headers} rows={rows} />}
         </div>
     );
 };

@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import Grid, { type Header } from "../../components/Grid/Grid";
-import type { Resource } from "../../app/types";
+import { useFetchResources } from "../../app/hooks/useFetchResources";
 
 
 const headers: Header[] = [
@@ -9,32 +8,7 @@ const headers: Header[] = [
 ];
 
 const ResourcesPage = () => {
-    const [resources, setResources] = useState<Resource[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchResources = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dictionaries/resources?status=1`);
-            if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
-            const data: Resource[] = await res.json();
-            setResources(data);
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                setError(e.message);
-            } else {
-                setError("Неизвестная ошибка");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchResources();
-    }, []);
+    const { resources, loading, error } = useFetchResources();
 
     const rows = resources.map((r) => ({
         id: r.Id ?? r.Name,

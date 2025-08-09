@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Grid, { type Header } from "../../components/Grid/Grid";
-import type { Option, InboundDocument } from "../../app/types";
+import type { Option, InboundDocument, Resource, Unit } from "../../app/types";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
 import { getInboundDocuments } from "../../app/api/Warehouse/inboundDocumentsApi";
 import { useFetchResources } from "../../app/hooks/useFetchResources";
@@ -14,26 +14,23 @@ const headers: Header[] = [
     { label: "Количество", accessor: "Quantity" },
 ];
 
-// You need actual options for resources and units for MultiSelects.
-// For demo, placeholders below — ideally fetched or from a dictionary.
-const resourceOptions: Option[] = [
-    { value: "res1", label: "Ресурс 1" },
-    { value: "res2", label: "Ресурс 2" },
-    { value: "res3", label: "Ресурс 3" },
-];
-
-const unitOptions: Option[] = [
-    { value: "unit1", label: "Ед. измерения 1" },
-    { value: "unit2", label: "Ед. измерения 2" },
-    { value: "unit3", label: "Ед. измерения 3" },
-];
-
 const InboundDocsPage = () => {
     const [documents, setDocuments] = useState<InboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { resources, resourcesLoading, resourcesError } = useFetchResources();
-    const { units, unitsLoading, unitsError } = useFetchUnits();
+
+    const { resources, loading: resourcesLoading, error: resourcesError } = useFetchResources();
+    const { units, loading: unitsLoading, error: unitsError } = useFetchUnits();
+
+    // Convert Resource and Unit arrays to Option[] for MultiSelect
+    const resourceOptions: Option[] = resources.map((r: Resource) => ({
+        value: r.Id ?? r.Name, // fallback to Name if Id missing
+        label: r.Name,
+    }));
+    const unitOptions: Option[] = units.map((u: Unit) => ({
+        value: u.Id ?? u.Name,
+        label: u.Name,
+    }));
 
     // Filter states:
     const [selectedResources, setSelectedResources] = useState<Option[]>([]);
@@ -157,10 +154,12 @@ const InboundDocsPage = () => {
                 </div>
             </div>
 
-            {loading && <p>Загрузка...</p>}
+            {(loading || resourcesLoading || unitsLoading) && <p>Загрузка...</p>}
             {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {unitsError}</p>}
 
-            {!loading && !error && <Grid headers={headers} rows={rows} />}
+            {(!loading && !error && !unitsError && !resourcesError) && <Grid headers={headers} rows={rows} />}
         </div>
     );
 };

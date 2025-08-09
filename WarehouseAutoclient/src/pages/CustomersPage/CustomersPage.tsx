@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
 import Grid, { type Header } from "../../components/Grid/Grid";
-import type { Customer } from "../../app/types";
+import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
 
 const headers: Header[] = [
     { label: "Имя клиента", accessor: "Name" },
@@ -9,32 +8,7 @@ const headers: Header[] = [
 ];
 
 const CustomersPage = () => {
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchCustomers = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dictionaries/customers?status=1`);
-            if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
-            const data: Customer[] = await res.json();
-            setCustomers(data);
-        } catch (e: unknown) {
-            if (e instanceof Error) {
-                setError(e.message);
-            } else {
-                setError("Неизвестная ошибка");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchCustomers();
-    }, []);
+    const { customers, loading, error } = useFetchCustomers();
 
     const rows = customers.map((c) => ({
         id: c.Id ?? c.Name,
