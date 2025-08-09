@@ -83,7 +83,7 @@ const CustomersPage = () => {
         try {
             if (customerToDelete.id) {
                 await deleteCustomer(customerToDelete.id);
-                showToast("UnCustomerit deleted successfully", "success");
+                showToast("UCustomerit deleted successfully", "success");
             } else {
                 console.error("Customer id is missing.");
                 showToast("Customer ID is missing", "error");
