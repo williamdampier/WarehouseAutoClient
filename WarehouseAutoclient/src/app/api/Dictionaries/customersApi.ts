@@ -2,8 +2,8 @@ import type { Customer } from "../../types";
 import { apiFetch } from "../apiClientApi";
 
 
-export const getCustomers = () =>
-    apiFetch<Customer[]>("dictionaries", "/customers");
+export const getCustomers = (archived: boolean = false) =>
+    apiFetch<Customer[]>("dictionaries", `/customers?status=${archived ? 2 : 1}`);
 
 export const getCustomerById = (id: string) =>
     apiFetch<Customer>("dictionaries", `/customers/${id}`);

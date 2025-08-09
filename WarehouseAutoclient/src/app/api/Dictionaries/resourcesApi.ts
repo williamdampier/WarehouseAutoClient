@@ -1,8 +1,8 @@
 import type { Resource } from "../../types";
 import { apiFetch } from "../apiClientApi";
 
-export const getResources = () =>
-    apiFetch<Resource[]>("dictionaries", "/resources");
+export const getResources = (archived: boolean = false) =>
+    apiFetch<Resource[]>("dictionaries", `/resources?status=${archived ? 2 : 1}`);
 
 export const getResourceById = (id: string) =>
     apiFetch<Resource>("dictionaries", `/resources/${id}`);

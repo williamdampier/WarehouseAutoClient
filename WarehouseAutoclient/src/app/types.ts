@@ -63,5 +63,14 @@ export interface OutboundDocument {
     resources: OutboundResource[];
 }
 
+export interface FieldConfig<T> {
+    key: keyof T;
+    label: string;
+    type: "text" | "number" | "select" | "checkbox";
+    options?: string[]; // for select
+    hidden?: boolean;
+    disabled?: boolean;
+}
+
 
 

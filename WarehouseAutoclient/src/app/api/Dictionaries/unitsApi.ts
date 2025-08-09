@@ -1,7 +1,8 @@
 import type { Unit } from "../../types";
 import { apiFetch } from "../apiClientApi";
 
-export const getUnits = () => apiFetch<Unit[]>("dictionaries", "/units");
+export const getUnits = (archived: boolean = false) =>
+    apiFetch<Unit[]>("dictionaries", `/units?status=${archived ? 2 : 1}`);
 
 export const getUnitById = (id: string) =>
     apiFetch<Unit>("dictionaries", `/units/${id}`);
@@ -21,4 +22,9 @@ export const updateUnit = (id: string, unit: Unit) =>
 export const deleteUnit = (id: string) =>
     apiFetch<void>("dictionaries", `/units/${id}`, {
         method: "DELETE",
+    });
+
+export const archiveUnit = (id: string) =>
+    apiFetch<void>("dictionaries", `/units/${id}/archive`, {
+        method: "PATCH",
     });

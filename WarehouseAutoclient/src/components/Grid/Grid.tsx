@@ -15,12 +15,14 @@ export type GridProps<T extends { id: string | number }> = {
         label: string;
         onClick: (row: T) => void;
     };
+    onRowClick?: (row: T) => void;
 };
 
 export default function Grid<T extends { id: string | number }>({
     headers,
     rows,
     buttonColumn,
+    onRowClick
 }: GridProps<T>) {
     return (
         <table className="simple-grid">
@@ -38,6 +40,7 @@ export default function Grid<T extends { id: string | number }>({
                         row={row}
                         headers={headers}
                         buttonColumn={buttonColumn}
+                        onRowClick={onRowClick}
                     />
                 ))}
             </tbody>
