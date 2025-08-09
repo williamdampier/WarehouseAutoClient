@@ -2,21 +2,17 @@ import Grid, { type Header } from "../../components/Grid/Grid";
 import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 
 const headers: Header[] = [
-    { label: "Название", accessor: "Name" },
-    { label: "Статус", accessor: "StatusLabel" },
-    // Если понадобится кнопка — можно добавить здесь, например:
-    // { label: "Действия", accessor: "actions" },
+    { label: "Название", accessor: "Name" }
 ];
 
 const UnitsPage = () => {
     const { units, loading, error } = useFetchUnits();
 
-    // Добавляем id (обязательное поле) и удобный статус для отображения
     const rows = units.map((u) => ({
-        id: u.Id ?? u.Name, // на всякий случай Id или fallback на Name
-        Name: u.Name,
-        StatusLabel: u.Status === 1 ? "Активен" : "Неактивен",
+        id: u.id,
+        Name: u.name
     }));
+
 
     return (
         <div className="page">
