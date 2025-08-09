@@ -4,6 +4,7 @@ import type { Customer, FieldConfig } from "../../app/types";
 import { useState } from "react";
 import { archiveCustomer, createCustomer, deleteCustomer, updateCustomer } from "../../app/api/Dictionaries/customersApi";
 import ActionPopup from "../../components/ActionPopup/ActionPopup";
+import Toast from "../../components/Toast/Toast";
 
 const headers: Header[] = [
     { label: "Имя клиента", accessor: "name" },
@@ -31,6 +32,11 @@ const CustomersPage = () => {
 
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
 
     const handleRowClick = async (selectedCustomer: Customer) => {
         setSelectedCustomer(selectedCustomer);
@@ -39,46 +45,81 @@ const CustomersPage = () => {
 
 
     const handleCreate = async (newCustomer: Customer) => {
-        console.log("Creating customer:", newCustomer);
-        createCustomer(newCustomer);
-        setPopupMode("create")
-        refetch();
+        try {
+            await createCustomer(newCustomer);
+            showToast("Customer created successfully", "success");
+        } catch (error) {
+            console.error("Create Customer failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to create Customer", "error");
+        }
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleSave = async (updatedCustomer: Customer) => {
-        console.log("Saving customer:", updatedCustomer);
-        if (updatedCustomer.id) {
-            updateCustomer(updatedCustomer.id, updatedCustomer);
-        } else {
-            console.error("Customer id is missing.");
+        try {
+            if (updatedCustomer.id) {
+                await updateCustomer(updatedCustomer.id, updatedCustomer);
+                showToast("Customer updated successfully", "success");
+            } else {
+                console.error("Customer id is missing.");
+                showToast("Customer id is missing.", "error");
+            }
+        } catch (error) {
+            console.error("Create Customer failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to create Customer", "error");
         }
-
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleDelete = async (customerToDelete: Customer) => {
-        console.log("Deleting customer:", customerToDelete);
-        if (customerToDelete.id) {
-            deleteCustomer(customerToDelete.id);
-        } else {
-            console.error("Customer id is missing.");
+        try {
+            if (customerToDelete.id) {
+                await deleteCustomer(customerToDelete.id);
+                showToast("UnCustomerit deleted successfully", "success");
+            } else {
+                console.error("Customer id is missing.");
+                showToast("Customer ID is missing", "error");
+            }
+        } catch (error) {
+            console.error("Delete failed:", error);
+            showToast(
+                error instanceof Error ? error.message :
+                    "Failed to delete Customer", "error"
+            );
         }
-
-        setPopupMode(null)
-        refetch();
+        finally {
+            setPopupMode(null)
+            refetch();
+        }
     };
 
     const handleArchive = async (customerToArchive: Customer) => {
-        console.log("Archiving customer:", customerToArchive);
-        if (customerToArchive.id) {
-            archiveCustomer(customerToArchive.id);
-        } else {
-            console.error("Customer id is missing.");
-        }
+        try {
+            if (customerToArchive.id) {
+                await archiveCustomer(customerToArchive.id);
+                showToast("Unit archived successfully", "success");
+            } else {
+                console.error("Customer id is missing.");
+                showToast("Customer ID is missing", "error");
+            }
 
-        setPopupMode(null)
-        refetch();
+        } catch (error) {
+            console.error("Archive failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to archive Customer", "error");
+        }
+        finally {
+            setPopupMode(null);
+            refetch();
+        }
     };
 
     const handleClosePopup = () => {
@@ -90,6 +131,13 @@ const CustomersPage = () => {
         <div className="page">
             <h1>Клиенты</h1>
 
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
 
             <div className="buttons-container">
                 {archived ? (
