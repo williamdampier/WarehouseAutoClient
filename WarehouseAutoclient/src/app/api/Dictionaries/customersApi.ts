@@ -24,3 +24,8 @@ export const deleteCustomer = (id: string) =>
     apiFetch<void>("dictionaries", `/customers/${id}`, {
         method: "DELETE",
     });
+
+export const archiveCustomer = (id: string) =>
+    apiFetch<void>("dictionaries", `/customers/${id}`, {
+        method: "PATCH",
+    });
