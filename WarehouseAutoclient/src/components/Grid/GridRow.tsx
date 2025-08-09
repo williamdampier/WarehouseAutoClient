@@ -8,19 +8,19 @@ type GridRowProps<T extends { id: string | number }> = {
         label: string;
         onClick: (row: T) => void;
     };
-    onClick?: (row: T) => void; // Optional onClick for the row
+    onRowClick?: (row: T) => void;
 };
 
 export function GridRow<T extends { id: string | number }>({
     row,
     headers,
     buttonColumn,
-    onClick,
+    onRowClick,
 }: GridRowProps<T>) {
     return (
         <tr
             key={row.id}
-            onClick={onClick ? () => onClick(row) : undefined}>
+            onClick={onRowClick ? () => onRowClick(row) : undefined}>
             {headers.map((header, i) => {
                 const value = (row as Record<string, unknown>)[header.accessor];
                 const isButton = buttonColumn && header.accessor === buttonColumn.key;

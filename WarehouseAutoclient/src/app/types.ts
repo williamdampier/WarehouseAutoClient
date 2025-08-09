@@ -3,63 +3,73 @@ export type Guid = string; // обычно Guid представлен как st
 
 
 export interface Resource {
-    Id?: Guid | null;
-    Name: string;
-    Status?: number | null;
+    id?: Guid | null;
+    name: string;
+    status?: number | null;
 }
 
 export interface Unit {
-    Id?: Guid | null;
-    Name: string;
-    Status?: number | null;
+    id?: Guid | null;
+    name: string;
+    status: number;
 }
+
 export interface Customer {
-    Id?: Guid | null;
-    Name: string;
-    Address: string;
-    Status?: number | null; // byte → number
+    id?: Guid | null;
+    name: string;
+    address: string;
+    status?: number | null; // byte → number
 }
 
 export interface BalanceRequest {
-    ResourceFilterIds: Guid[];
-    UnitFilterIds: Guid[];
+    resourceFilterIds: Guid[];
+    unitFilterIds: Guid[];
 }
 
 export interface Balance {
-    BalanceId: Guid;
-    ResourceId: Guid;
-    UnitId: Guid;
-    Quantity: number; // decimal в C# обычно number в TS
+    balanceId: Guid;
+    resourceId: Guid;
+    unitId: Guid;
+    quantity: number; // decimal → number
 }
 
 export interface InboundResource {
-    Id?: Guid | null;
-    ResourceId: Guid;
-    UnitId: Guid;
-    Quantity: number;
+    id?: Guid | null;
+    resourceId: Guid;
+    unitId: Guid;
+    quantity: number;
 }
 
 export interface InboundDocument {
-    Id?: Guid | null;
-    DocumentNumber: string;
-    DateReceived: string; // DateTime обычно string ISO в JSON
-    Resources: InboundResource[];
+    id?: Guid | null;
+    documentNumber: string;
+    dateReceived: string; // ISO string
+    resources: InboundResource[];
 }
 
 export interface OutboundResource {
-    Id?: Guid | null;
-    ResourceId: Guid;
-    UnitId: Guid;
-    Quantity: number;
+    id?: Guid | null;
+    resourceId: Guid;
+    unitId: Guid;
+    quantity: number;
 }
 
 export interface OutboundDocument {
-    Id?: Guid | null;
-    DocumentNumber: string;
-    CustomerId: Guid;
-    DateShipped: string;
-    Status: number;
-    Resources: OutboundResource[];
+    id?: Guid | null;
+    documentNumber: string;
+    customerId: Guid;
+    dateShipped: string;
+    status: number;
+    resources: OutboundResource[];
+}
+
+export interface FieldConfig<T> {
+    key: keyof T;
+    label: string;
+    type: "text" | "number" | "select" | "checkbox";
+    options?: string[]; // for select
+    hidden?: boolean;
+    disabled?: boolean;
 }
 
 
