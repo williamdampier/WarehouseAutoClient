@@ -3,18 +3,16 @@ import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
 
 const headers: Header[] = [
     { label: "Имя клиента", accessor: "Name" },
-    { label: "Адрес", accessor: "Address" },
-    { label: "Статус", accessor: "StatusLabel" },
+    { label: "Адрес", accessor: "Address" }
 ];
 
 const CustomersPage = () => {
     const { customers, loading, error } = useFetchCustomers();
 
     const rows = customers.map((c) => ({
-        id: c.Id ?? c.Name,
-        Name: c.Name,
-        Address: c.Address,
-        StatusLabel: c.Status === 1 ? "Активен" : "Неактивен",
+        id: c.id ?? c.name,
+        Name: c.name,
+        Address: c.address
     }));
 
     return (

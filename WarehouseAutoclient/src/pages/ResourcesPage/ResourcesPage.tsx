@@ -3,17 +3,15 @@ import { useFetchResources } from "../../app/hooks/useFetchResources";
 
 
 const headers: Header[] = [
-    { label: "Название ресурса", accessor: "Name" },
-    { label: "Статус", accessor: "StatusLabel" },
+    { label: "Название ресурса", accessor: "Name" }
 ];
 
 const ResourcesPage = () => {
     const { resources, loading, error } = useFetchResources();
 
     const rows = resources.map((r) => ({
-        id: r.Id ?? r.Name,
-        Name: r.Name,
-        StatusLabel: r.Status === 1 ? "Активен" : "Неактивен",
+        id: r.id ?? r.name,
+        Name: r.name
     }));
 
     return (
