@@ -9,7 +9,7 @@ export interface Resource {
 }
 
 export interface Unit {
-    id: string;
+    id?: Guid | null;
     name: string;
     status: number;
 }

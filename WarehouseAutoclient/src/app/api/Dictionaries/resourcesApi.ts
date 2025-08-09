@@ -23,3 +23,8 @@ export const deleteResource = (id: string) =>
     apiFetch<void>("dictionaries", `/resources/${id}`, {
         method: "DELETE",
     });
+
+export const archiveResource = (id: string) =>
+    apiFetch<void>("dictionaries", `/resources/${id}`, {
+        method: "PATCH",
+    });

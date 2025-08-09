@@ -46,21 +46,36 @@ const UnitsPage = () => {
 
     const handleSave = async (updatedUnit: Unit) => {
         console.log("Saving unit:", updatedUnit);
-        updateUnit(updatedUnit.id, updatedUnit);
+        if (updatedUnit.id) {
+            updateUnit(updatedUnit.id, updatedUnit);
+        } else {
+            console.error("Unit id is missing.");
+        }
+
         setPopupMode(null)
         refetch();
     };
 
     const handleDelete = async (unitToDelete: Unit) => {
         console.log("Deleting unit:", unitToDelete);
-        deleteUnit(unitToDelete.id);
+        if (unitToDelete.id) {
+            deleteUnit(unitToDelete.id);
+        } else {
+            console.error("Unit id is missing.");
+        }
+
         setPopupMode(null)
         refetch();
     };
 
     const handleArchive = async (unitToArchive: Unit) => {
         console.log("Archiving unit:", unitToArchive);
-        archiveUnit(unitToArchive.id);
+        if (unitToArchive.id) {
+            archiveUnit(unitToArchive.id);
+        } else {
+            console.error("Unit id is missing.");
+        }
+
         setPopupMode(null)
         refetch();
     };
@@ -104,7 +119,7 @@ const UnitsPage = () => {
                 !loading && !error &&
                 <Grid
                     headers={headers}
-                    rows={units}
+                    rows={units.filter((u): u is Unit & { id: string | number } => u.id !== null && u.id !== undefined)}
                     onRowClick={archived ? undefined : (unit) => handleRowClick(unit)}
                 />
             }
@@ -127,7 +142,7 @@ const UnitsPage = () => {
             {
                 popupMode === "create" && (
                     <ActionPopup<Unit>
-                        title={`Создать: Новая единица измерения}`}
+                        title={`Создать: Новая единица измерения`}
                         fields={unitFields}
                         showArchive={false}
                         onClose={handleClosePopup}
