@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Resource } from "../types";
-import { getResources } from "../api/Disctionaries/resourcesApi";
+import { getResources } from "../api/Dictionaries/resourcesApi";
 
 // Hook for fetching resources
 export function useFetchResources() {

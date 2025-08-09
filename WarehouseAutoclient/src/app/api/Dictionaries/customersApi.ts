@@ -3,24 +3,24 @@ import { apiFetch } from "../apiClientApi";
 
 
 export const getCustomers = () =>
-    apiFetch<Customer[]>("dictionary", "/customers");
+    apiFetch<Customer[]>("dictionaries", "/customers");
 
 export const getCustomerById = (id: string) =>
-    apiFetch<Customer>("dictionary", `/customers/${id}`);
+    apiFetch<Customer>("dictionaries", `/customers/${id}`);
 
 export const createCustomer = (customer: Customer) =>
-    apiFetch<Customer>("dictionary", "/customers", {
+    apiFetch<Customer>("dictionaries", "/customers", {
         method: "POST",
         body: JSON.stringify(customer),
     });
 
 export const updateCustomer = (id: string, customer: Customer) =>
-    apiFetch<Customer>("dictionary", `/customers/${id}`, {
+    apiFetch<Customer>("dictionaries", `/customers/${id}`, {
         method: "PUT",
         body: JSON.stringify(customer),
     });
 
 export const deleteCustomer = (id: string) =>
-    apiFetch<void>("dictionary", `/customers/${id}`, {
+    apiFetch<void>("dictionaries", `/customers/${id}`, {
         method: "DELETE",
     });

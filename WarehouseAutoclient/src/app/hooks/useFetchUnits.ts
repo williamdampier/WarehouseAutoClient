@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Unit } from "../types";
-import { getUnits } from "../api/Disctionaries/unitsApi";
+import { getUnits } from "../api/Dictionaries/unitsApi";
 
 // Hook for fetching units
 export function useFetchUnits() {

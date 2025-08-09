@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Customer } from "../types";
-import { getCustomers } from "../api/Disctionaries/customersApi";
+import { getCustomers } from "../api/Dictionaries/customersApi";
 
 
 // Hook for fetching customers
