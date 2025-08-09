@@ -4,7 +4,7 @@ import { getCustomers } from "../api/Disctionaries/customersApi";
 
 
 // Hook for fetching customers
-export function useCustomers() {
+export function useFetchCustomers() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);

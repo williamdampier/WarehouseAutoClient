@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
-import type { Unit } from "../types";
-import { getUnits } from "../api/Disctionaries/unitsApi";
+import type { Resource } from "../types";
+import { getResources } from "../api/Disctionaries/resourcesApi";
 
-// Hook for fetching units
-export function useUnits() {
-    const [units, setUnits] = useState<Unit[]>([]);
+// Hook for fetching resources
+export function useFetchResources() {
+    const [resources, setResources] = useState<Resource[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         setLoading(true);
         setError(null);
-        getUnits()
-            .then((data) => setUnits(data))
+        getResources()
+            .then((data) => setResources(data))
             .catch((e) => setError(e instanceof Error ? e.message : "Unknown error"))
             .finally(() => setLoading(false));
     }, []);
 
-    return { units, loading, error };
+    return { resources, loading, error };
 }

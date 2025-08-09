@@ -3,6 +3,8 @@ import Grid, { type Header } from "../../components/Grid/Grid";
 import type { Option, InboundDocument } from "../../app/types";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
 import { getInboundDocuments } from "../../app/api/Warehouse/inboundDocumentsApi";
+import { useFetchResources } from "../../app/hooks/useFetchResources";
+import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 
 const headers: Header[] = [
     { label: "Номер", accessor: "DocumentNumber" },
@@ -30,6 +32,8 @@ const InboundDocsPage = () => {
     const [documents, setDocuments] = useState<InboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { resources, resourcesLoading, resourcesError } = useFetchResources();
+    const { units, unitsLoading, unitsError } = useFetchUnits();
 
     // Filter states:
     const [selectedResources, setSelectedResources] = useState<Option[]>([]);
