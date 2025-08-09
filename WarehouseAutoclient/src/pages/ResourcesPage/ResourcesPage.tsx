@@ -1,47 +1,57 @@
-import Grid from '../../components/Grid/Grid';
+import { useEffect, useState } from "react";
+import Grid, { type Header } from "../../components/Grid/Grid";
+import type { Resource } from "../../app/types";
 
 
-const resources = [
-    {
-        name: "ООО Ромашка",
-    },
-    {
-        name: "ЗАО ТехноИмпекс",
-    },
-    {
-        name: "ИП Иванов И.И.",
-    },
-    {
-        name: "АО МегаСклад",
-    },
-    {
-        name: "ООО ГрузКом",
-    },
+const headers: Header[] = [
+    { label: "Название ресурса", accessor: "Name" },
+    { label: "Статус", accessor: "StatusLabel" },
 ];
-const headers = ["Наименование"];
-
 
 const ResourcesPage = () => {
-    const handleAdd = () => {
-        console.log("Добавить нового клиента");
-    }
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleArchive = () => {
-        console.log("Архивировать выбранных клиентов");
-    }
+    const fetchResources = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dictionaries/resources?status=1`);
+            if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+            const data: Resource[] = await res.json();
+            setResources(data);
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                setError(e.message);
+            } else {
+                setError("Неизвестная ошибка");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchResources();
+    }, []);
+
+    const rows = resources.map((r) => ({
+        id: r.Id ?? r.Name,
+        Name: r.Name,
+        StatusLabel: r.Status === 1 ? "Активен" : "Неактивен",
+    }));
 
     return (
         <div className="page">
             <h1>Ресурсы</h1>
-            <div className="filters">
-                <div className="buttons-container">
-                    <button className="add-button" onClick={handleAdd}>Добавить</button>
-                    <button className="archive-button" onClick={handleArchive}>Применить</button>
-                </div>
-            </div>
-            <Grid headers={headers} rows={resources} />
+
+            {loading && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+
+            {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
-    )
-}
+    );
+};
 
 export default ResourcesPage;

@@ -1,0 +1,21 @@
+import { useEffect, useState } from "react";
+import type { Resource } from "../types";
+import { getResources } from "../api/Disctionaries/resourcesApi";
+
+// Hook for fetching resources
+export function useResources() {
+    const [resources, setResources] = useState<Resource[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setLoading(true);
+        setError(null);
+        getResources()
+            .then((data) => setResources(data))
+            .catch((e) => setError(e instanceof Error ? e.message : "Unknown error"))
+            .finally(() => setLoading(false));
+    }, []);
+
+    return { resources, loading, error };
+}

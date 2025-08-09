@@ -1,61 +1,58 @@
-import Grid from '../../components/Grid/Grid';
+import { useEffect, useState } from "react";
+import Grid, { type Header } from "../../components/Grid/Grid";
+import type { Customer } from "../../app/types";
 
-
-const customers = [
-    {
-        name: "ООО Ромашка",
-        address: "г. Москва, ул. Ленина, д. 10",
-    },
-    {
-        name: "ЗАО ТехноИмпекс",
-        address: "г. Санкт-Петербург, пр. Невский, д. 25",
-    },
-    {
-        name: "ИП Иванов И.И.",
-        address: "г. Новосибирск, ул. Красный проспект, д. 5",
-    },
-    {
-        name: "АО МегаСклад",
-        address: "г. Екатеринбург, ул. Малышева, д. 100",
-    },
-    {
-        name: "ООО ГрузКом",
-        address: "г. Казань, ул. Баумана, д. 8",
-    },
+const headers: Header[] = [
+    { label: "Имя клиента", accessor: "Name" },
+    { label: "Адрес", accessor: "Address" },
+    { label: "Статус", accessor: "StatusLabel" },
 ];
-const headers = [
-    { label: "Наименование", accessor: "name" },
-    { label: "Адрес", accessor: "address" },
-];
-
-
 
 const CustomersPage = () => {
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleAdd = () => {
-        console.log("Добавить нового клиента");
-    }
+    const fetchCustomers = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/dictionaries/customers?status=1`);
+            if (!res.ok) throw new Error(`Ошибка сервера: ${res.status}`);
+            const data: Customer[] = await res.json();
+            setCustomers(data);
+        } catch (e: unknown) {
+            if (e instanceof Error) {
+                setError(e.message);
+            } else {
+                setError("Неизвестная ошибка");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    const handleArchive = () => {
-        console.log("Архивировать выбранных клиентов");
-    }
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
 
+    const rows = customers.map((c) => ({
+        id: c.Id ?? c.Name,
+        Name: c.Name,
+        Address: c.Address,
+        StatusLabel: c.Status === 1 ? "Активен" : "Неактивен",
+    }));
 
     return (
         <div className="page">
             <h1>Клиенты</h1>
-            <div className="filters">
 
+            {loading && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
 
-
-                <div className="buttons-container">
-                    <button className="add-button" onClick={handleAdd}>Добавить</button>
-                    <button className="archive-button" onClick={handleArchive}>Применить</button>
-                </div>
-            </div>
-            <Grid headers={headers} rows={customers} />
+            {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
-    )
-}
+    );
+};
 
 export default CustomersPage;

@@ -1,149 +1,164 @@
-
-import { useEffect, useState } from 'react'
-import { MultiSelect } from '../../components/MultiSelect/MultiSelect';
-import Grid, { type Header } from '../../components/Grid/Grid';
-import type { Option } from '../../app/types';
-
-const resources: Option[] = [
-    { value: 'opt1', label: 'Опция 1' },
-    { value: 'opt2', label: 'Опция 2' },
-    { value: 'opt3', label: 'Опция 3' },
-]
-
-const units: Option[] = [
-    { value: 'cat1', label: 'Категория 1' },
-    { value: 'cat2', label: 'Категория 2' },
-    { value: 'cat3', label: 'Категория 3' },
-]
-
+import { useEffect, useState } from "react";
+import Grid, { type Header } from "../../components/Grid/Grid";
+import type { Option, InboundDocument } from "../../app/types";
+import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
+import { getInboundDocuments } from "../../app/api/Warehouse/inboundDocumentsApi";
 
 const headers: Header[] = [
-    { label: 'Номер', accessor: 'number' },
-    { label: 'Дата', accessor: 'date' },
-    { label: 'Ресурс', accessor: 'resource' },
-    { label: 'Единица измерения', accessor: 'unit' },
-    { label: 'Количество', accessor: 'quantity' }
+    { label: "Номер", accessor: "DocumentNumber" },
+    { label: "Дата", accessor: "DateReceived" },
+    { label: "Ресурсы", accessor: "Resources" },
+    { label: "Единицы измерения", accessor: "Units" },
+    { label: "Количество", accessor: "Quantity" },
 ];
 
-const allRows = [
-    { Номер: "123", Дата: "2025-08-01", Ресурс: "Опция 1", 'Единица измерения': "Категория 1", Количество: "10" },
-    { Номер: "456", Дата: "2025-08-03", Ресурс: "Опция 2", 'Единица измерения': "Категория 2", Количество: "5" },
-    { Номер: "789", Дата: "2025-08-05", Ресурс: "Опция 3", 'Единица измерения': "Категория 3", Количество: "20" },
+// You need actual options for resources and units for MultiSelects.
+// For demo, placeholders below — ideally fetched or from a dictionary.
+const resourceOptions: Option[] = [
+    { value: "res1", label: "Ресурс 1" },
+    { value: "res2", label: "Ресурс 2" },
+    { value: "res3", label: "Ресурс 3" },
+];
+
+const unitOptions: Option[] = [
+    { value: "unit1", label: "Ед. измерения 1" },
+    { value: "unit2", label: "Ед. измерения 2" },
+    { value: "unit3", label: "Ед. измерения 3" },
 ];
 
 const InboundDocsPage = () => {
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [selectedNumbers, setSelectedNumbers] = useState<Option[]>([]);
+    const [documents, setDocuments] = useState<InboundDocument[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Filter states:
     const [selectedResources, setSelectedResources] = useState<Option[]>([]);
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([]);
-    const [appliedFilters, setAppliedFilters] = useState<{
-        numOptions: Option[],
-        resOptions: Option[],
-        unitOptions: Option[]
-    }>({
-        numOptions: [],
-        resOptions: [],
-        unitOptions: [],
-    });
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
 
-
-    const handleAdd = () => {
-        console.log("Добавить новый документ");
-        // Можно добавить открытие модального окна или переход на страницу создания
+    const fetchDocuments = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await getInboundDocuments({});
+            setDocuments(data);
+        } catch (e: unknown) {
+            if (e instanceof Error) setError(e.message);
+            else setError("Неизвестная ошибка");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleApply = () => {
-        setAppliedFilters({
-            numOptions: selectedNumbers,
-            resOptions: selectedResources,
-            unitOptions: selectedUnits,
-        });
-    };
+    useEffect(() => {
+        fetchDocuments();
+    }, []);
 
-    const filteredRows = allRows.filter(row => {
-        // Фильтр по дате
-        if (startDate && row['Дата'] < startDate) return false;
-        if (endDate && row['Дата'] > endDate) return false;
+    // Filtering client-side by selected filters
+    const filteredDocs = documents.filter((doc) => {
+        // Date filter
+        if (startDate && doc.DateReceived < startDate) return false;
+        if (endDate && doc.DateReceived > endDate) return false;
 
-        // Фильтр по выбранным номерам (если есть выбор)
-        if (appliedFilters.numOptions.length > 0) {
-            const selectedNums = appliedFilters.numOptions.map(opt => opt.label);
-            if (!selectedNums.includes(row['Номер'])) return false;
+        // Filter by resources if selected
+        if (selectedResources.length > 0) {
+            // Check if doc.Resources includes any selected resource value
+            const resourceIds = selectedResources.map((r) => r.value);
+            const hasResource = doc.Resources.some((res) =>
+                resourceIds.includes(res.ResourceId)
+            );
+            if (!hasResource) return false;
         }
 
-        // Фильтр по выбранным ресурсам
-        if (appliedFilters.resOptions.length > 0) {
-            const selectedRes = appliedFilters.resOptions.map(opt => opt.label);
-            if (!selectedRes.includes(row['Ресурс'])) return false;
-        }
-
-        // Фильтр по выбранным единицам измерения
-        if (appliedFilters.unitOptions.length > 0) {
-            const selectedUnitsLabels = appliedFilters.unitOptions.map(opt => opt.label);
-            if (!selectedUnitsLabels.includes(row['Единица измерения'])) return false;
+        // Filter by units if selected
+        if (selectedUnits.length > 0) {
+            const unitIds = selectedUnits.map((u) => u.value);
+            const hasUnit = doc.Resources.some((res) =>
+                unitIds.includes(res.UnitId)
+            );
+            if (!hasUnit) return false;
         }
 
         return true;
     });
 
-    useEffect(() => { }, [appliedFilters])
+    // Map filtered docs to rows for Grid
+    const rows = filteredDocs.map((doc) => {
+        const resourceNames = doc.Resources
+            .map((r) => {
+                // Map ResourceId to label for display
+                const option = resourceOptions.find((o) => o.value === r.ResourceId);
+                return option ? option.label : r.ResourceId;
+            })
+            .join(", ");
+
+        const unitNames = doc.Resources
+            .map((r) => {
+                const option = unitOptions.find((o) => o.value === r.UnitId);
+                return option ? option.label : r.UnitId;
+            })
+            .join(", ");
+
+        const totalQuantity = doc.Resources.reduce((sum, r) => sum + r.Quantity, 0);
+
+        return {
+            id: doc.Id ?? doc.DocumentNumber,
+            DocumentNumber: doc.DocumentNumber,
+            DateReceived: doc.DateReceived.slice(0, 10),
+            Resources: resourceNames,
+            Units: unitNames,
+            Quantity: totalQuantity.toString(),
+        };
+    });
 
     return (
         <div className="page">
             <h1>Поступления</h1>
+
             <div className="filters">
                 <div className="filter-group">
-                    <label>Период</label>
+                    <label>Период с</label>
                     <input
                         type="date"
-                        className="date-input"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
                     />
+                    <label>по</label>
                     <input
                         type="date"
-                        className="date-input"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
                     />
                 </div>
-                <div className="filter-group">
-                    <label>Номер поступления</label>
-                    <MultiSelect
-                        options={resources}
-                        selected={selectedNumbers}
-                        onChange={setSelectedNumbers}
-                        placeholder="Выберите номера"
-                    />
-                </div>
+
                 <div className="filter-group">
                     <label>Ресурсы</label>
                     <MultiSelect
-                        options={resources}
+                        options={resourceOptions}
                         selected={selectedResources}
                         onChange={setSelectedResources}
                         placeholder="Выберите ресурсы"
                     />
                 </div>
+
                 <div className="filter-group">
                     <label>Единицы измерения</label>
                     <MultiSelect
-                        options={units}
+                        options={unitOptions}
                         selected={selectedUnits}
                         onChange={setSelectedUnits}
                         placeholder="Выберите единицы"
                     />
                 </div>
-
-                <div className="buttons-container">
-                    <button className="apply-button" onClick={handleApply}>Применить</button>
-                    <button className="add-button" onClick={handleAdd}>Добавить</button>
-                </div>
             </div>
-            <Grid headers={headers} rows={filteredRows} />
+
+            {loading && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+
+            {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
-    )
-}
+    );
+};
 
 export default InboundDocsPage;
