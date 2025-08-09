@@ -1,113 +1,66 @@
 export type Option = { value: string; label: string }
 export type Guid = string; // обычно Guid представлен как string в TS
 
-export interface BalanceRequest {
-    ResourceFilterIds: Guid[];
-    UnitFilterIds: Guid[];
+
+export interface Resource {
+    Id?: Guid | null;
+    Name: string;
+    Status?: number | null;
 }
 
-export interface BalanceResponse {
-    BalanceId: Guid;
-    ResourceId: Guid;
-    UnitId: Guid;
-    Quantity: number; // decimal в C# обычно number в TS
+export interface Unit {
+    Id?: Guid | null;
+    Name: string;
+    Status?: number | null;
 }
-
-export interface CustomersRequest {
+export interface Customer {
     Id?: Guid | null;
     Name: string;
     Address: string;
     Status?: number | null; // byte → number
 }
 
-export interface CustomersResponse {
-    Id: Guid;
-    Name: string;
-    Address: string;
-    Status: number;
+export interface BalanceRequest {
+    ResourceFilterIds: Guid[];
+    UnitFilterIds: Guid[];
 }
 
-export interface InboundResourceRequest {
+export interface Balance {
+    BalanceId: Guid;
+    ResourceId: Guid;
+    UnitId: Guid;
+    Quantity: number; // decimal в C# обычно number в TS
+}
+
+export interface InboundResource {
     Id?: Guid | null;
     ResourceId: Guid;
     UnitId: Guid;
     Quantity: number;
 }
 
-export interface InboundResourceResponse {
-    Id: Guid;
-    ResourceId: Guid;
-    UnitId: Guid;
-    Quantity: number;
-}
-
-export interface InboundDocumentRequest {
+export interface InboundDocument {
     Id?: Guid | null;
     DocumentNumber: string;
     DateReceived: string; // DateTime обычно string ISO в JSON
-    Resources: InboundResourceRequest[];
+    Resources: InboundResource[];
 }
 
-export interface InboundDocumentResponse {
-    Id: Guid;
-    DocumentNumber: string;
-    DateReceived: string;
-    Resources: InboundResourceResponse[];
-}
-
-export interface OutboundResourceRequest {
+export interface OutboundResource {
     Id?: Guid | null;
     ResourceId: Guid;
     UnitId: Guid;
     Quantity: number;
 }
 
-export interface OutboundResourceResponse {
-    Id: Guid;
-    ResourceId: Guid;
-    UnitId: Guid;
-    Quantity: number;
-}
-
-export interface OutboundDocumentRequest {
+export interface OutboundDocument {
     Id?: Guid | null;
     DocumentNumber: string;
     CustomerId: Guid;
     DateShipped: string;
     Status: number;
-    Resources: OutboundResourceRequest[];
+    Resources: OutboundResource[];
 }
 
-export interface OutboundDocumentResponse {
-    Id: Guid;
-    DocumentNumber: string;
-    CustomerId: Guid;
-    DateShipped: string;
-    Status: number;
-    Resources: OutboundResourceResponse[];
-}
 
-export interface Resources {
-    Id?: Guid | null;
-    Name: string;
-    Status?: number | null;
-}
-
-export interface ResourcesResponse {
-    Id: Guid;
-    Name: string;
-    Status: number;
-}
-
-export interface Units {
-    Id?: Guid | null;
-    Name: string;
-    Status?: number | null;
-}
-
-export interface UnitsResponse {
-    Id: Guid;
-    Name: string;
-    Status: number;
-}
 
