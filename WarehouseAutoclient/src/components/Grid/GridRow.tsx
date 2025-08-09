@@ -1,4 +1,3 @@
-import React from "react";
 import type { Header } from "./Grid";
 
 type GridRowProps<T extends { id: string | number }> = {

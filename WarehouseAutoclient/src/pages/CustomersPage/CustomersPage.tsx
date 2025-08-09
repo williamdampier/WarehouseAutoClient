@@ -1,61 +1,32 @@
-import Grid from '../../components/Grid/Grid';
+import Grid, { type Header } from "../../components/Grid/Grid";
+import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
 
-
-const customers = [
-    {
-        name: "ООО Ромашка",
-        address: "г. Москва, ул. Ленина, д. 10",
-    },
-    {
-        name: "ЗАО ТехноИмпекс",
-        address: "г. Санкт-Петербург, пр. Невский, д. 25",
-    },
-    {
-        name: "ИП Иванов И.И.",
-        address: "г. Новосибирск, ул. Красный проспект, д. 5",
-    },
-    {
-        name: "АО МегаСклад",
-        address: "г. Екатеринбург, ул. Малышева, д. 100",
-    },
-    {
-        name: "ООО ГрузКом",
-        address: "г. Казань, ул. Баумана, д. 8",
-    },
+const headers: Header[] = [
+    { label: "Имя клиента", accessor: "Name" },
+    { label: "Адрес", accessor: "Address" },
+    { label: "Статус", accessor: "StatusLabel" },
 ];
-const headers = [
-    { label: "Наименование", accessor: "name" },
-    { label: "Адрес", accessor: "address" },
-];
-
-
 
 const CustomersPage = () => {
+    const { customers, loading, error } = useFetchCustomers();
 
-    const handleAdd = () => {
-        console.log("Добавить нового клиента");
-    }
-
-    const handleArchive = () => {
-        console.log("Архивировать выбранных клиентов");
-    }
-
+    const rows = customers.map((c) => ({
+        id: c.Id ?? c.Name,
+        Name: c.Name,
+        Address: c.Address,
+        StatusLabel: c.Status === 1 ? "Активен" : "Неактивен",
+    }));
 
     return (
         <div className="page">
             <h1>Клиенты</h1>
-            <div className="filters">
 
+            {loading && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
 
-
-                <div className="buttons-container">
-                    <button className="add-button" onClick={handleAdd}>Добавить</button>
-                    <button className="archive-button" onClick={handleArchive}>Применить</button>
-                </div>
-            </div>
-            <Grid headers={headers} rows={customers} />
+            {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
-    )
-}
+    );
+};
 
 export default CustomersPage;

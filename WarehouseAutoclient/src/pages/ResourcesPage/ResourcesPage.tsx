@@ -1,47 +1,31 @@
-import Grid from '../../components/Grid/Grid';
+import Grid, { type Header } from "../../components/Grid/Grid";
+import { useFetchResources } from "../../app/hooks/useFetchResources";
 
 
-const resources = [
-    {
-        name: "ООО Ромашка",
-    },
-    {
-        name: "ЗАО ТехноИмпекс",
-    },
-    {
-        name: "ИП Иванов И.И.",
-    },
-    {
-        name: "АО МегаСклад",
-    },
-    {
-        name: "ООО ГрузКом",
-    },
+const headers: Header[] = [
+    { label: "Название ресурса", accessor: "Name" },
+    { label: "Статус", accessor: "StatusLabel" },
 ];
-const headers = ["Наименование"];
-
 
 const ResourcesPage = () => {
-    const handleAdd = () => {
-        console.log("Добавить нового клиента");
-    }
+    const { resources, loading, error } = useFetchResources();
 
-    const handleArchive = () => {
-        console.log("Архивировать выбранных клиентов");
-    }
+    const rows = resources.map((r) => ({
+        id: r.Id ?? r.Name,
+        Name: r.Name,
+        StatusLabel: r.Status === 1 ? "Активен" : "Неактивен",
+    }));
 
     return (
         <div className="page">
             <h1>Ресурсы</h1>
-            <div className="filters">
-                <div className="buttons-container">
-                    <button className="add-button" onClick={handleAdd}>Добавить</button>
-                    <button className="archive-button" onClick={handleArchive}>Применить</button>
-                </div>
-            </div>
-            <Grid headers={headers} rows={resources} />
+
+            {loading && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+
+            {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
-    )
-}
+    );
+};
 
 export default ResourcesPage;
