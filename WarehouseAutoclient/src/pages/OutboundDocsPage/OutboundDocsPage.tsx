@@ -205,8 +205,6 @@ const OutboundDocsPage = () => {
 
     const handleSave = async (updatedDocument: OutboundDocument) => {
         try {
-            console.log("Saving Outbound Document:", updatedDocument);
-            console.log("JSON Payload:", JSON.stringify(updatedDocument, null, 2));
             if (updatedDocument.id) {
                 const cleanedResources = updatedDocument.resources?.filter(
                     (r) => r.resourceId && r.unitId && r.quantity > 0
