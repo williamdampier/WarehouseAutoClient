@@ -44,7 +44,7 @@ export interface InboundDocument {
     id?: Guid | null;
     documentNumber: string;
     dateReceived: string; // ISO string
-    nboundResources: InboundResource[];
+    resources: InboundResource[];
 }
 
 export interface OutboundResource {

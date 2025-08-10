@@ -24,29 +24,41 @@ export function GridRowExtended<TParent, TChild>({
     onRowClick
 }: GridRowExtendedProps<TParent, TChild>) {
     const embeddedRows = row[embeddedAccessor] as unknown as TChild[];
-    const rowSpan = embeddedRows.length;
 
     return (
         <>
-            {embeddedRows.map((child, childIndex) => (
-                <tr key={`${rowIndex}-${childIndex}`}
-                    className="grid-embedded-row"
-                    onClick={() => onRowClick?.(row)}
-                >
-                    {headers.map((h) =>
-                        childIndex === 0 ? (
-                            <td key={String(h.accessor)} rowSpan={rowSpan} className="grid-parent-cell">
-                                {h.render?.(row[h.accessor], row) ?? (row[h.accessor] as React.ReactNode)}
-                            </td>
-                        ) : null
-                    )}
+            {embeddedRows.length === 0 ? (
+                <tr key={`${rowIndex}-empty`} className="grid-embedded-row" onClick={() => onRowClick?.(row)}>
+                    {headers.map((h) => (
+                        <td key={String(h.accessor)} className="grid-parent-cell">
+                            {h.render?.(row[h.accessor], row) ?? (row[h.accessor] as React.ReactNode)}
+                        </td>
+                    ))}
                     {embeddedHeaders.map((h) => (
-                        <td key={String(h.accessor)}>
-                            {h.render?.(child[h.accessor], child) ?? (child[h.accessor] as React.ReactNode)}
+                        <td key={String(h.accessor)} className="grid-empty-cell">
+                            {/* Optional: show placeholder or leave blank */}
+                            <em style={{ color: "#999" }}>—</em>
                         </td>
                     ))}
                 </tr>
-            ))}
+            ) : (
+                embeddedRows.map((child, childIndex) => (
+                    <tr key={`${rowIndex}-${childIndex}`} className="grid-embedded-row" onClick={() => onRowClick?.(row)}>
+                        {headers.map((h) =>
+                            childIndex === 0 ? (
+                                <td key={String(h.accessor)} rowSpan={embeddedRows.length} className="grid-parent-cell">
+                                    {h.render?.(row[h.accessor], row) ?? (row[h.accessor] as React.ReactNode)}
+                                </td>
+                            ) : null
+                        )}
+                        {embeddedHeaders.map((h) => (
+                            <td key={String(h.accessor)}>
+                                {h.render?.(child[h.accessor], child) ?? (child[h.accessor] as React.ReactNode)}
+                            </td>
+                        ))}
+                    </tr>
+                ))
+            )}
         </>
     );
 }
