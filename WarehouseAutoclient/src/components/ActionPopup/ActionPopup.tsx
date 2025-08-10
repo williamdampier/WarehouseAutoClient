@@ -2,6 +2,15 @@ import { useEffect, useState, useRef } from "react";
 import "./ActionPopup.css";
 import type { Customer, FieldConfig, FieldOption, Resource, Unit } from "../../app/types";
 
+const formatDateInput = (val: unknown): string => {
+    if (typeof val === "string") {
+        const date = new Date(val);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString().split("T")[0]; // "YYYY-MM-DD"
+        }
+    }
+    return "";
+};
 
 
 interface ActionPopupProps<T extends object> {
@@ -103,9 +112,21 @@ function ActionPopup<T extends object>({
     };
 
     const handleChange = (key: keyof T, value: unknown) => {
+        const field = fields.find(f => f.key === key);
+        const isDateField = field?.type === "date";
+
+        let finalValue = value;
+
+        if (isDateField && typeof value === "string") {
+            // Convert "2025-08-04" to "2025-08-04T00:00:00.000Z"
+            const [year, month, day] = value.split("-");
+            const utcDate = new Date(Date.UTC(+year, +month - 1, +day));
+            finalValue = utcDate.toISOString();
+        }
+
         setFormData((prev) => ({
             ...prev,
-            [key]: value,
+            [key]: finalValue,
         }));
     };
 
@@ -173,6 +194,13 @@ function ActionPopup<T extends object>({
                                         type="checkbox"
                                         checked={Boolean(value)}
                                         onChange={(e) => handleChange(key, e.target.checked)}
+                                        disabled={disabled}
+                                    />
+                                ) : type === "date" ? (
+                                    <input
+                                        type="date"
+                                        value={formatDateInput(value)}
+                                        onChange={(e) => handleChange(key, e.target.value)}
                                         disabled={disabled}
                                     />
                                 ) : (
