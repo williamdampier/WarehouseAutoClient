@@ -44,7 +44,7 @@ export interface InboundDocument {
     id?: Guid | null;
     documentNumber: string;
     dateReceived: string; // ISO string
-    resources: InboundResource[];
+    nboundResources: InboundResource[];
 }
 
 export interface OutboundResource {
@@ -60,7 +60,7 @@ export interface OutboundDocument {
     customerId: Guid;
     dateShipped: string;
     status: number;
-    resources: OutboundResource[];
+    outboundResources: OutboundResource[];
 }
 
 export interface FieldConfig<T> {

@@ -1,13 +1,48 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Customer, Option, OutboundDocument, OutboundResource, Resource, Unit } from "../../app/types";
-import type { Header } from "../../components/Grid/Grid";
 import { getOutboundDocuments } from "../../app/api/Warehouse/outboundDocumentsApi";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
-import Grid from "../../components/Grid/Grid";
+import { GridExtended } from "../../components/Grid/GridExtended";
 import { useFetchResources } from "../../app/hooks/useFetchResources";
 import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
+import type { HeaderExtended } from "../../components/Grid/GridExtended";
+import { StatusButton } from "../../components/StatusButton/StatusButton";
 
+
+const docsMock = [{
+    "outboundDocumentId": "01987db2-872a-723a-a29c-6f0ab41924bf",
+    "documentNumber": "outbound2",
+    "customerId": "66f5a092-6877-4f33-a080-498cbbf1940e",
+    "dateShipped": "2025-08-06T04:43:51.403Z",
+    "status": 1,
+    "outboundResources": [
+        {
+            "outboundResourceId": "77b5bb25-7d8c-44a9-b652-d6f280b687a9",
+            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
+            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
+            "quantity": 2
+        },
+        {
+            "outboundResourceId": "80a02750-44e5-4321-aece-8c497d16c6e9",
+            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
+            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
+            "quantity": 2
+        },
+        {
+            "outboundResourceId": "d9d29f4c-028e-4743-a3f1-50d5c78110d0",
+            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
+            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
+            "quantity": 2
+        },
+        {
+            "outboundResourceId": "ef26cbac-8c0f-475b-b77c-b1445928dc2e",
+            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
+            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
+            "quantity": 2
+        }
+    ]
+}]
 // Helper to render status button with colors
 const getStatusButton = (statusNum: number) => {
     const statusMap: Record<number, { label: string; color: string }> = {
@@ -33,16 +68,6 @@ const getStatusButton = (statusNum: number) => {
     );
 };
 
-// Headers for Grid component
-const headers: Header[] = [
-    { label: "Номер", accessor: "DocumentNumber" },
-    { label: "Дата отгрузки", accessor: "DateShipped" },
-    { label: "Клиент", accessor: "CustomerName" },
-    { label: "Статус", accessor: "StatusButton" },
-    { label: "Ресурсы", accessor: "Resources" },
-    { label: "Единицы измерения", accessor: "Units" },
-    { label: "Количество", accessor: "Quantity" },
-];
 
 
 const OutboundDocsPage = () => {
@@ -66,6 +91,21 @@ const OutboundDocsPage = () => {
         refetch: refetchCustomers
     } = useFetchCustomers();
 
+    // Headers for Grid component
+    const headers: HeaderExtended<OutboundDocument>[] = [
+        { label: "Номер", accessor: "documentNumber" },
+        { label: "Дата", accessor: "dateShipped" },
+        { label: "Клиент", accessor: "customerId" },
+        {
+            label: "Статус",
+            accessor: "status",
+            render: (value, row) => (
+                <StatusButton status={value as number} onClick={() => updateStatus(row)} />
+            ),
+        },
+    ];
+
+
 
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const showToast = (message: string, type: "success" | "error") => {
@@ -80,7 +120,9 @@ const OutboundDocsPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-
+    function updateStatus(doc: OutboundDocument) {
+        console.log("Updating status for:", doc.documentNumber);
+    }
 
 
     // Filters state
@@ -90,20 +132,9 @@ const OutboundDocsPage = () => {
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
 
-    // Convert Resource and Unit arrays to Option[] for MultiSelect
-    const resourceOptions: Option[] = resources.map((r: Resource) => ({
-        value: r.id ?? r.name, // fallback to Name if Id missing
-        label: r.name,
-    }));
-    const unitOptions: Option[] = units.map((u: Unit) => ({
-        value: u.id ?? u.name,
-        label: u.name,
-    }));
-
-    const customersOptions: Option[] = customers.map((u: Customer) => ({
-        value: u.id ?? u.name,
-        label: u.name,
-    }));
+    const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
+    const [unitOptions, setUnitOptions] = useState<Option[]>([]);
+    const [customersOptions, setCustomersOptions] = useState<Option[]>([]);
 
     // Fetch documents from API
     const fetchDocuments = useCallback(async () => {
@@ -132,47 +163,17 @@ const OutboundDocsPage = () => {
         fetchDocuments();
     }, [fetchDocuments]);
 
-    // Filter by selected customers client-side if needed
-    const filteredDocs = selectedCustomers.length > 0
-        ? documents.filter((doc) => {
-            // Here you need to match doc.CustomerId to selected customers by value (assuming value = customer Id)
-            const selectedCustomerIds = selectedCustomers.map((c) => c.value);
-            return selectedCustomerIds.includes(doc.customerId);
-        })
-        : documents;
-
     // Prepare rows for Grid
-    const rows = filteredDocs.map((doc) => {
-        const resourceNames = doc.resources
-            .map((r: OutboundResource) => {
-                const opt = resourceOptions.find((o) => o.value === r.resourceId);
-                return opt ? opt.label : r.resourceId;
-            })
-            .join(", ");
+    const enrichedDocuments: OutboundDocument[] = documents.map((doc) => ({
+        ...doc,
+        customerName: customersOptions.find((c) => c.value === doc.customerId)?.label ?? doc.customerId,
+        resources: (doc.outboundResources ?? []).map((r) => ({
+            ...r,
+            resourceName: resourceOptions.find((o) => o.value === r.resourceId)?.label ?? r.resourceId,
+            unitName: unitOptions.find((o) => o.value === r.unitId)?.label ?? r.unitId,
+        })),
+    }));
 
-        const unitNames = doc.resources
-            .map((r: OutboundResource) => {
-                const opt = unitOptions.find((o) => o.value === r.unitId);
-                return opt ? opt.label : r.unitId;
-            })
-            .join(", ");
-
-        const totalQuantity = doc.resources.reduce((sum: number, r: OutboundResource) => sum + r.quantity, 0);
-
-        // Find customer name from dummy list or fallback
-        const customer = customersOptions.find((c) => c.value === doc.customerId);
-
-        return {
-            id: doc.id ?? doc.documentNumber,
-            DocumentNumber: doc.documentNumber,
-            DateShipped: doc.dateShipped.slice(0, 10),
-            CustomerName: customer?.label ?? doc.customerId,
-            StatusButton: getStatusButton(doc.status),
-            Resources: resourceNames,
-            Units: unitNames,
-            Quantity: totalQuantity.toString(),
-        };
-    });
 
     return (
         <div className="page">
@@ -219,12 +220,48 @@ const OutboundDocsPage = () => {
 
             {(loading || resourcesLoading || unitsLoading || customersLoading) && <p>Загрузка...</p>}
             {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
-            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError}</p>}
-            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {unitsError}</p>}
-            {customersError && <p style={{ color: "red" }}>Ошибка загрузки клиентов: {customersError}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError.message}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {resourcesError.message}</p>}
+            {customersError && <p style={{ color: "red" }}>Ошибка загрузки клиентов: {customersError.message}</p>}
 
 
-            {(!loading && !error && !unitsError && !resourcesError) && <Grid headers={headers} rows={rows} />}
+            {(!loading && !error && !unitsError && !resourcesError) &&
+                <GridExtended<OutboundDocument, OutboundResource>
+                    rows={enrichedDocuments}
+                    headers={[
+                        { label: "Номер", accessor: "documentNumber" },
+                        { label: "Дата", accessor: "dateShipped" },
+                        {
+                            label: "Клиент",
+                            accessor: "customerId",
+                            render: (value) => <>{customers.find((c) => c.id === value)?.name ?? value}</>,
+                        },
+                        {
+                            label: "Статус",
+                            accessor: "status",
+                            render: (value, row) => (
+                                <StatusButton status={value as number} onClick={() => updateStatus(row)} />
+                            ),
+                        },
+                    ]}
+                    embeddedAccessor="outboundResources"
+                    embeddedHeaders={[
+                        {
+                            label: "Ресурс",
+                            accessor: "resourceId",
+                            render: (value) => resources.find((r) => r.id === value)?.name ?? value,
+                        },
+                        {
+                            label: "Единица измерения",
+                            accessor: "unitId",
+                            render: (value) => units.find((u) => u.id === value)?.name ?? value,
+                        },
+                        {
+                            label: "Количество",
+                            accessor: "quantity",
+                        },
+                    ]}
+                />}
         </div>
     );
 };
