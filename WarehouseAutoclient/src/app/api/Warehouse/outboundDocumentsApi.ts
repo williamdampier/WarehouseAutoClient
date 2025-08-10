@@ -36,7 +36,7 @@ export const createOutboundDocument = (doc: OutboundDocument) =>
     });
 
 export const updateOutboundDocument = (id: string, doc: OutboundDocument) =>
-    apiFetch<void>(basePath, `${resourcePath}/${id}`, {
+    apiFetch<OutboundDocument>(basePath, `${resourcePath}/${id}`, {
         method: "PUT",
         body: JSON.stringify(doc),
     });

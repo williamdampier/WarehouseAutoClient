@@ -1,10 +1,10 @@
-import type { OutboundResource, FieldOption, InboundResource } from "../../app/types";
+import type { OutboundResource, FieldOption, InboundResource, Resource, Unit } from "../../app/types";
 
 interface Props {
     resources: OutboundResource[] | InboundResource[];
     onChange: (updated: OutboundResource[] | InboundResource[]) => void;
-    resourceOptions: FieldOption[];
-    unitOptions: FieldOption[];
+    resourceOptions: Resource[];
+    unitOptions: Unit[];
 }
 
 export default function ResourceEditorTable({
@@ -62,8 +62,8 @@ export default function ResourceEditorTable({
                                     }
                                 >
                                     {resourceOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
+                                        <option key={opt.id} value={opt.id ?? ""}>
+                                            {opt.name}
                                         </option>
                                     ))}
                                 </select>
@@ -76,8 +76,8 @@ export default function ResourceEditorTable({
                                     }
                                 >
                                     {unitOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
+                                        <option key={opt.id} value={opt.id ?? ""}>
+                                            {opt.name}
                                         </option>
                                     ))}
                                 </select>

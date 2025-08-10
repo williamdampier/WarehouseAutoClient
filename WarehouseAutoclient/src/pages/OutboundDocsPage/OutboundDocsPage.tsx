@@ -12,6 +12,7 @@ import Toast from "../../components/Toast/Toast";
 import ActionPopup from "../../components/ActionPopup/ActionPopup";
 import ResourceEditorTable from "../../components/ActionPopup/ResourceEditorTable";
 
+const REFETCH_TIMEOUT = import.meta.env.VITE_REFETCH_TIMEOUT || 300; //default wait 300ms before refetching
 
 const formatDate = (iso: string) => {
     const date = new Date(iso);
@@ -71,18 +72,27 @@ const OutboundDocsPage = () => {
     const showToast = (message: string, type: "success" | "error") => {
         setToast({ message, type });
     };
-    const refetch = useCallback(() => {
-        refetchUnits();
-        refetchResources();
-        refetchCustomers();
-    }, [refetchUnits, refetchResources, refetchCustomers]);
+
+
+
+    const refetch = useCallback(
+        async (delayMs: number = REFETCH_TIMEOUT) => {
+            if (delayMs > 0) {
+                await new Promise(res => setTimeout(res, delayMs));
+            }
+            refetchUnits();
+            refetchResources();
+            refetchCustomers();
+        },
+        [refetchUnits, refetchResources, refetchCustomers]
+    );
 
     const [documents, setDocuments] = useState<OutboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     function updateStatus(doc: OutboundDocument) {
-        console.log("Updating status for:", doc.documentNumber);
+        console.log("Updating status for:", doc.id);
     }
 
 
@@ -195,8 +205,17 @@ const OutboundDocsPage = () => {
     const handleSave = async (updatedDocument: OutboundDocument) => {
         try {
             console.log("Saving Outbound Document:", updatedDocument);
+            console.log("JSON Payload:", JSON.stringify(updatedDocument, null, 2));
             if (updatedDocument.id) {
-                await updateOutboundDocument(updatedDocument.id, updatedDocument);
+                const cleanedResources = updatedDocument.resources?.filter(
+                    (r) => r.resourceId && r.unitId && r.quantity > 0
+                );
+
+                const cleanedDocument = {
+                    ...updatedDocument,
+                    resources: cleanedResources,
+                };
+                await updateOutboundDocument(updatedDocument.id, cleanedDocument);
                 showToast("Отгрузка обновлена успешно", "success");
             } else {
                 console.error("Outbound Document id is missing.");
@@ -322,22 +341,17 @@ const OutboundDocsPage = () => {
                         onClose={handleClosePopup}
                         onSave={handleSave}
                         onDelete={handleDelete}
-                        unitOptions={unitOptions}
-                        resourceOptions={resourceOptions}
-                        customersOptions={customersOptions}
-                        customContent={
+                        unitOptions={units}
+                        resourceOptions={resources}
+                        customersOptions={customers}
+                        customContent={(formData, handleChange) => (
                             <ResourceEditorTable
-                                resources={selectedDocument.resources || []}
-                                onChange={(updated) =>
-                                    setSelectedDocument((prev) => ({
-                                        ...prev!,
-                                        resources: updated,
-                                    }))
-                                }
-                                unitOptions={unitOptions}
-                                resourceOptions={resourceOptions}
+                                resources={formData.resources || []}
+                                onChange={(updated) => handleChange("resources", updated)}
+                                unitOptions={units}
+                                resourceOptions={resources}
                             />
-                        }
+                        )}
                     />
                 )
             }
@@ -350,22 +364,17 @@ const OutboundDocsPage = () => {
                         showArchive={false}
                         onClose={handleClosePopup}
                         onSave={handleCreate}
-                        unitOptions={unitOptions}
-                        resourceOptions={resourceOptions}
-                        customersOptions={customersOptions}
-                        customContent={
+                        unitOptions={units}
+                        resourceOptions={resources}
+                        customersOptions={customers}
+                        customContent={(formData, handleChange) => (
                             <ResourceEditorTable
-                                resources={[]}
-                                onChange={(updated) =>
-                                    setSelectedDocument((prev) => ({
-                                        ...prev!,
-                                        resources: updated,
-                                    }))
-                                }
-                                unitOptions={unitOptions}
-                                resourceOptions={resourceOptions}
+                                resources={formData.resources || []}
+                                onChange={(updated) => handleChange("resources", updated)}
+                                unitOptions={units}
+                                resourceOptions={resources}
                             />
-                        }
+                        )}
                     />
                 )
             }

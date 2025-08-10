@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import "./ActionPopup.css";
-import type { FieldConfig, FieldOption } from "../../app/types";
+import type { Customer, FieldConfig, FieldOption, Resource, Unit } from "../../app/types";
 
 
 
@@ -15,10 +15,10 @@ interface ActionPopupProps<T extends object> {
     onDelete?: (data: T) => Promise<void>;
     onArchive?: (data: T) => Promise<void>;
 
-    customContent?: React.ReactNode;
-    resourceOptions?: FieldOption[]; // for resourceId
-    unitOptions?: FieldOption[];     // for unitId
-    customersOptions?: FieldOption[]; // for customerId
+    customContent?: (formData: T, handleChange: (key: keyof T, value: unknown) => void) => React.ReactNode;
+    resourceOptions?: Resource[]; // for resourceId
+    unitOptions?: Unit[];     // for unitId
+    customersOptions?: Customer[]; // for customerId
 }
 
 import React from "react";
@@ -33,10 +33,7 @@ function ActionPopup<T extends object>({
     onSave,
     onDelete,
     onArchive,
-    customContent,
-    resourceOptions,
-    unitOptions,
-    customersOptions
+    customContent
 }: ActionPopupProps<T>): React.ReactElement {
     const [loading, setLoading] = useState<"" | "save" | "delete" | "archive">("");
     const [error, setError] = useState("");
@@ -169,7 +166,7 @@ function ActionPopup<T extends object>({
                         );
                     })}
                 </div>
-                {customContent}
+                {customContent?.(formData, handleChange)}
 
             </div>
         </div>
