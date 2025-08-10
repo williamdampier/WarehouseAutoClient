@@ -24,7 +24,6 @@ export function GridRowExtended<TParent, TChild>({
     onRowClick
 }: GridRowExtendedProps<TParent, TChild>) {
     const embeddedRows = row[embeddedAccessor] as unknown as TChild[];
-    const rowSpan = embeddedRows.length;
 
     return (
         <>
