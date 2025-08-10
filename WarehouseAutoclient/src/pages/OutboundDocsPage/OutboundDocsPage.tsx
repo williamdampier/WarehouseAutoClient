@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FieldConfig, Option, OutboundDocument, OutboundResource } from "../../app/types";
-import { getOutboundDocuments } from "../../app/api/Warehouse/outboundDocumentsApi";
+import { createOutboundDocument, deleteOutboundDocument, getOutboundDocuments, updateOutboundDocument } from "../../app/api/Warehouse/outboundDocumentsApi";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
 import { GridExtended } from "../../components/Grid/GridExtended";
 import { useFetchResources } from "../../app/hooks/useFetchResources";
@@ -10,6 +10,7 @@ import type { HeaderExtended } from "../../components/Grid/GridExtended";
 import { StatusButton } from "../../components/StatusButton/StatusButton";
 import Toast from "../../components/Toast/Toast";
 import ActionPopup from "../../components/ActionPopup/ActionPopup";
+import ResourceEditorTable from "../../components/ActionPopup/ResourceEditorTable";
 
 
 const formatDate = (iso: string) => {
@@ -19,10 +20,6 @@ const formatDate = (iso: string) => {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
 };
-
-
-
-
 
 const OutboundDocsPage = () => {
     const {
@@ -77,7 +74,8 @@ const OutboundDocsPage = () => {
     const refetch = useCallback(() => {
         refetchUnits();
         refetchResources();
-    }, [refetchUnits, refetchResources]);
+        refetchCustomers();
+    }, [refetchUnits, refetchResources, refetchCustomers]);
 
     const [documents, setDocuments] = useState<OutboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
@@ -131,12 +129,13 @@ const OutboundDocsPage = () => {
     const enrichedDocuments: OutboundDocument[] = documents.map((doc) => ({
         ...doc,
         customerName: customersOptions.find((c) => c.value === doc.customerId)?.label ?? doc.customerId,
-        resources: (doc.outboundResources ?? []).map((r) => ({
+        resources: (doc.resources ?? []).map((r) => ({
             ...r,
             resourceName: resourceOptions.find((o) => o.value === r.resourceId)?.label ?? r.resourceId,
             unitName: unitOptions.find((o) => o.value === r.unitId)?.label ?? r.unitId,
         })),
     }));
+
     useEffect(() => {
         const unitOptions: Option[] = units.map((u) => { return { value: u.id || "", label: u.name } })
         setUnitOptions(unitOptions)
@@ -153,6 +152,7 @@ const OutboundDocsPage = () => {
     }, [customers])
 
     const handleRowClick = async (selectedDoc: OutboundDocument) => {
+        console.log("Selected document:", selectedDoc);
         setSelectedDocument(selectedDoc);
         setPopupMode("edit")
     };
@@ -181,7 +181,7 @@ const OutboundDocsPage = () => {
 
     const handleCreate = async (newDocument: OutboundDocument) => {
         try {
-            // Call API to create new document
+            await createOutboundDocument(newDocument);
             showToast("Отгрузка создана успешно", "success");
         } catch (error) {
             console.error("Create Outbound Document failed:", error);
@@ -194,8 +194,9 @@ const OutboundDocsPage = () => {
 
     const handleSave = async (updatedDocument: OutboundDocument) => {
         try {
+            console.log("Saving Outbound Document:", updatedDocument);
             if (updatedDocument.id) {
-                // Call API to update document
+                await updateOutboundDocument(updatedDocument.id, updatedDocument);
                 showToast("Отгрузка обновлена успешно", "success");
             } else {
                 console.error("Outbound Document id is missing.");
@@ -214,6 +215,7 @@ const OutboundDocsPage = () => {
         try {
             if (document.id) {
                 // Call API to delete document
+                await deleteOutboundDocument(document.id);
                 showToast("Отгрузка удалена успешно", "success");
             } else {
                 console.error("Outbound Document id is missing.");
@@ -290,7 +292,7 @@ const OutboundDocsPage = () => {
                     rows={enrichedDocuments}
                     onRowClick={handleRowClick}
                     headers={headers}
-                    embeddedAccessor="outboundResources"
+                    embeddedAccessor="resources"
                     embeddedHeaders={[
                         {
                             label: "Ресурс",
@@ -320,6 +322,22 @@ const OutboundDocsPage = () => {
                         onClose={handleClosePopup}
                         onSave={handleSave}
                         onDelete={handleDelete}
+                        unitOptions={unitOptions}
+                        resourceOptions={resourceOptions}
+                        customersOptions={customersOptions}
+                        customContent={
+                            <ResourceEditorTable
+                                resources={selectedDocument.resources || []}
+                                onChange={(updated) =>
+                                    setSelectedDocument((prev) => ({
+                                        ...prev!,
+                                        resources: updated,
+                                    }))
+                                }
+                                unitOptions={unitOptions}
+                                resourceOptions={resourceOptions}
+                            />
+                        }
                     />
                 )
             }
@@ -327,11 +345,27 @@ const OutboundDocsPage = () => {
             {
                 popupMode === "create" && (
                     <ActionPopup<OutboundDocument>
-                        title={`Создать: Новая единица измерения`}
+                        title={`Создать: Новый документ`}
                         fields={outboundDocumentFields}
                         showArchive={false}
                         onClose={handleClosePopup}
                         onSave={handleCreate}
+                        unitOptions={unitOptions}
+                        resourceOptions={resourceOptions}
+                        customersOptions={customersOptions}
+                        customContent={
+                            <ResourceEditorTable
+                                resources={[]}
+                                onChange={(updated) =>
+                                    setSelectedDocument((prev) => ({
+                                        ...prev!,
+                                        resources: updated,
+                                    }))
+                                }
+                                unitOptions={unitOptions}
+                                resourceOptions={resourceOptions}
+                            />
+                        }
                     />
                 )
             }

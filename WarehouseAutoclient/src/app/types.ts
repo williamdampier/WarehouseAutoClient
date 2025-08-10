@@ -60,7 +60,7 @@ export interface OutboundDocument {
     customerId: Guid;
     dateShipped: string;
     status: number;
-    outboundResources: OutboundResource[];
+    resources: OutboundResource[];
 }
 
 export interface FieldOption {

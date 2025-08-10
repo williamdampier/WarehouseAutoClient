@@ -1,6 +1,6 @@
 // Grid.tsx
 import "./Grid.css";
-import { GridRow } from "./GridRow";
+
 import { GridRowExtended } from "./GridRowExtended";
 
 export type HeaderExtended<T, K extends keyof T = keyof T> = {
