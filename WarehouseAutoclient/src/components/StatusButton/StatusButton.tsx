@@ -1,6 +1,6 @@
 type StatusButtonProps = {
     status: number;
-    onClick?: () => void;
+    onClick: () => void;
 };
 
 export function StatusButton({ status, onClick }: StatusButtonProps) {
@@ -17,7 +17,10 @@ export function StatusButton({ status, onClick }: StatusButtonProps) {
                 borderRadius: "4px",
                 cursor: "pointer",
             }}
-            onClick={onClick}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
         >
             {label}
         </button>
@@ -27,9 +30,9 @@ export function StatusButton({ status, onClick }: StatusButtonProps) {
 // Utility functions
 function getStatusLabel(status: number): string {
     switch (status) {
-        case 0:
-            return "Не подписан";
         case 1:
+            return "Не подписан";
+        case 2:
             return "Подписан";
         default:
             return "Неизвестно";
@@ -38,11 +41,11 @@ function getStatusLabel(status: number): string {
 
 function getStatusColor(status: number): string {
     switch (status) {
-        case 0:
-            return "#d9534f"; // red
         case 1:
+            return "#999"; // gray
+        case 2:
             return "#5cb85c"; // green
         default:
-            return "#999"; // gray
+            return "#d9534f"; // red
     }
 }

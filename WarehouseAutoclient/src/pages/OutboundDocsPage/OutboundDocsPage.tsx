@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { FieldConfig, Option, OutboundDocument, OutboundResource } from "../../app/types";
-import { createOutboundDocument, deleteOutboundDocument, getOutboundDocuments, updateOutboundDocument } from "../../app/api/Warehouse/outboundDocumentsApi";
+import { createOutboundDocument, deleteOutboundDocument, getOutboundDocuments, revokeOutboundDocumentSignature, signOutboundDocument, updateOutboundDocument } from "../../app/api/Warehouse/outboundDocumentsApi";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
 import { GridExtended } from "../../components/Grid/GridExtended";
 import { useFetchResources } from "../../app/hooks/useFetchResources";
@@ -77,11 +77,6 @@ const OutboundDocsPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    function updateStatus(doc: OutboundDocument) {
-        console.log("Updating status for:", doc.id);
-    }
-
-
     // Filters state
     const [selectedDocument, setSelectedDocument] = useState<OutboundDocument | null>(null);
     const [selectedCustomers, setSelectedCustomers] = useState<Option[]>([]);
@@ -104,6 +99,7 @@ const OutboundDocsPage = () => {
                 endDate: endDate || undefined,
                 resourceIds: selectedResources.map((r) => r.value),
                 unitIds: selectedUnits.map((u) => u.value),
+                customerIds: selectedCustomers.map((c) => c.value)
                 // For customers filter, you may need to map customer values to IDs if different
             };
             const data = await getOutboundDocuments(params);
@@ -114,7 +110,7 @@ const OutboundDocsPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [startDate, endDate, selectedResources, selectedUnits]);
+    }, [startDate, endDate, selectedResources, selectedUnits, selectedCustomers]);
 
     // Refresh data when filters change
     useEffect(() => {
@@ -162,6 +158,10 @@ const OutboundDocsPage = () => {
     }, [customers])
 
     const handleRowClick = async (selectedDoc: OutboundDocument) => {
+        if (selectedDoc.status == 2) {
+            showToast("Подпись должна быть отозвана перед редактированием", "error")
+            return
+        }
         console.log("Selected document:", selectedDoc);
         setSelectedDocument(selectedDoc);
         setPopupMode("edit")
@@ -197,6 +197,7 @@ const OutboundDocsPage = () => {
             console.error("Create Outbound Document failed:", error);
             showToast(error instanceof Error ? error.message : "Не удалось создать отгрузку", "error");
         } finally {
+            setSelectedDocument(null);
             setPopupMode(null);
             refetch();
         }
@@ -225,6 +226,7 @@ const OutboundDocsPage = () => {
             console.error("Update Outbound Document failed:", error);
             showToast(error instanceof Error ? error.message : "Не удалось обновить отгрузку", "error");
         } finally {
+            setSelectedDocument(null);
             setPopupMode(null);
             refetch();
         }
@@ -244,10 +246,37 @@ const OutboundDocsPage = () => {
             console.error("Delete Outbound Document failed:", error);
             showToast(error instanceof Error ? error.message : "Не удалось удалить отгрузку", "error");
         } finally {
+            setSelectedDocument(null);
             setPopupMode(null);
             refetch();
         }
     };
+
+    const updateStatus = async (doc: OutboundDocument) => {
+        try {
+            if (doc.id) {
+                if (doc.status === 1) {
+                    await signOutboundDocument(doc.id);
+                    showToast("Отгрузка успешно подписана", "success");
+                } else if (doc.status === 2) {
+                    await revokeOutboundDocumentSignature(doc.id);
+                    showToast("Подпись отгрузки успешно отозвана", "success");
+                } else {
+                    showToast("Неверный статус подписи отгрузки.", "error");
+                }
+            } else {
+                console.error("Outbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Sign/Unign Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось обновить подпись отгрузки", "error");
+        } finally {
+            setSelectedDocument(null);
+            setPopupMode(null);
+            refetch();
+        }
+    }
 
 
     return (
@@ -260,6 +289,14 @@ const OutboundDocsPage = () => {
                     onClose={() => setToast(null)}
                 />
             )}
+            <div className="buttons-container">
+                <button
+                    className="apply-button"
+                    onClick={() => setPopupMode("create")}
+                >
+                    Добавить
+                </button>
+            </div>
             <div className="filters">
                 <div className="filter-group">
                     <label>Период с</label>

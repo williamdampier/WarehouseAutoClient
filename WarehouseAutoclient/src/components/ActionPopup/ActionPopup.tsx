@@ -2,6 +2,15 @@ import { useEffect, useState, useRef } from "react";
 import "./ActionPopup.css";
 import type { Customer, FieldConfig, FieldOption, Resource, Unit } from "../../app/types";
 
+const formatDateInput = (val: unknown): string => {
+    if (typeof val === "string") {
+        const date = new Date(val);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString().split("T")[0]; // "YYYY-MM-DD"
+        }
+    }
+    return "";
+};
 
 
 interface ActionPopupProps<T extends object> {
@@ -33,7 +42,7 @@ function ActionPopup<T extends object>({
     onSave,
     onDelete,
     onArchive,
-    customContent
+    customContent,
 }: ActionPopupProps<T>): React.ReactElement {
     const [loading, setLoading] = useState<"" | "save" | "delete" | "archive">("");
     const [error, setError] = useState("");
@@ -64,14 +73,36 @@ function ActionPopup<T extends object>({
         };
     }, [onClose]);
 
+    const patchFormData = (data: T): T => {
+        const patched = { ...data };
+
+        for (const field of fields) {
+            const value = patched[field.key];
+
+            if ((value === undefined || value === "") && field.type === "select" && field.options?.length) {
+                patched[field.key] = field.options[0].value as T[keyof T];
+            }
+
+        }
+
+        return patched;
+    };
+
+
     const handleAction = async (
         action: "save" | "delete" | "archive",
         fn: (data: T) => Promise<void>
     ) => {
+        let patchedData = formData;
+
+        if (action === "save") {
+            patchedData = patchFormData(formData);
+        }
+
         setLoading(action);
         setError("");
         try {
-            await fn(formData);
+            await fn(patchedData);
             onClose();
         } catch {
             setError(`Failed to ${action} item.`);
@@ -81,12 +112,23 @@ function ActionPopup<T extends object>({
     };
 
     const handleChange = (key: keyof T, value: unknown) => {
+        const field = fields.find(f => f.key === key);
+        const isDateField = field?.type === "date";
+
+        let finalValue = value;
+
+        if (isDateField && typeof value === "string") {
+            // Convert "2025-08-04" to "2025-08-04T00:00:00.000Z"
+            const [year, month, day] = value.split("-");
+            const utcDate = new Date(Date.UTC(+year, +month - 1, +day));
+            finalValue = utcDate.toISOString();
+        }
+
         setFormData((prev) => ({
             ...prev,
-            [key]: value,
+            [key]: finalValue,
         }));
     };
-
 
 
     return (
@@ -152,6 +194,13 @@ function ActionPopup<T extends object>({
                                         type="checkbox"
                                         checked={Boolean(value)}
                                         onChange={(e) => handleChange(key, e.target.checked)}
+                                        disabled={disabled}
+                                    />
+                                ) : type === "date" ? (
+                                    <input
+                                        type="date"
+                                        value={formatDateInput(value)}
+                                        onChange={(e) => handleChange(key, e.target.value)}
                                         disabled={disabled}
                                     />
                                 ) : (
