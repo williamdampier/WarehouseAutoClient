@@ -260,6 +260,14 @@ const OutboundDocsPage = () => {
                     onClose={() => setToast(null)}
                 />
             )}
+            <div className="buttons-container">
+                <button
+                    className="apply-button"
+                    onClick={() => setPopupMode("create")}
+                >
+                    Добавить
+                </button>
+            </div>
             <div className="filters">
                 <div className="filter-group">
                     <label>Период с</label>
