@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { OutboundResource, FieldOption, InboundResource, Resource, Unit } from "../../app/types";
 
 interface Props {
@@ -38,6 +39,24 @@ export default function ResourceEditorTable({
             { resourceId: "", unitId: "", quantity: 0 },
         ]);
     };
+
+    useEffect(() => {
+        const patched = resources.map((r) => {
+            const patchedResourceId = r.resourceId || resourceOptions[0]?.id || "";
+            const patchedUnitId = r.unitId || unitOptions[0]?.id || "";
+
+            return {
+                ...r,
+                resourceId: patchedResourceId,
+                unitId: patchedUnitId,
+            };
+        });
+
+        if (JSON.stringify(patched) !== JSON.stringify(resources)) {
+            onChange(patched);
+        }
+    }, [resources, resourceOptions, unitOptions, onChange]);
+
 
     return (
         <div className="resource-table">
