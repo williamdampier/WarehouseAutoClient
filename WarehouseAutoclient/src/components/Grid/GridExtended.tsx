@@ -1,6 +1,7 @@
 // Grid.tsx
 import "./Grid.css";
 import { GridRow } from "./GridRow";
+import { GridRowExtended } from "./GridRowExtended";
 
 export type HeaderExtended<T, K extends keyof T = keyof T> = {
     label: string;
@@ -24,7 +25,6 @@ export type GridProps<TParent, TChild> = {
 export function GridExtended<TParent, TChild>({
     headers,
     rows,
-    buttonColumn,
     embeddedAccessor,
     embeddedHeaders,
     onRowClick
@@ -42,25 +42,17 @@ export function GridExtended<TParent, TChild>({
                 </tr>
             </thead>
             <tbody>
-                {rows.map((row, rowIndex) => {
-                    const embeddedRows = row[embeddedAccessor] as unknown as TChild[];
-                    return embeddedRows.map((child, childIndex) => (
-                        <tr key={`${rowIndex}-${childIndex}`} className="grid-embedded-row">
-                            {headers.map((h) => (
-                                <td key={String(h.accessor)}>
-                                    {childIndex === 0
-                                        ? h.render?.(row[h.accessor], row) ?? (row[h.accessor] as React.ReactNode)
-                                        : null}
-                                </td>
-                            ))}
-                            {embeddedHeaders.map((h) => (
-                                <td key={String(h.accessor)}>
-                                    {h.render?.(child[h.accessor], child) ?? (child[h.accessor] as React.ReactNode)}
-                                </td>
-                            ))}
-                        </tr>
-                    ));
-                })}
+                {rows.map((row, rowIndex) => (
+                    <GridRowExtended
+                        key={rowIndex}
+                        row={row}
+                        headers={headers}
+                        embeddedHeaders={embeddedHeaders}
+                        embeddedAccessor={embeddedAccessor}
+                        rowIndex={rowIndex}
+                        onRowClick={onRowClick}
+                    />
+                ))}
             </tbody>
         </table>
     );

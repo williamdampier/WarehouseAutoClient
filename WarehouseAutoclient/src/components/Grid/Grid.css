@@ -31,7 +31,27 @@
 
 .grid-embedded-row {
     background-color: #f9f9f9;
-    font-size: 0.9rem;
-    padding: 4px 8px;
     border-top: 1px solid #ddd;
+}
+
+.grid-embedded-row:hover {
+    background-color: #eef6ff;
+}
+
+.grid-embedded-row:active {
+    background-color: #d0e7ff;
+}
+
+.grid-parent-cell {
+    vertical-align: top;
+    background-color: #fff;
+    font-weight: 500;
+    padding: 8px;
+}
+
+.grid-parent-cell {
+    vertical-align: top;
+    background-color: #fff;
+    font-weight: 500;
+    padding: 8px;
 }
