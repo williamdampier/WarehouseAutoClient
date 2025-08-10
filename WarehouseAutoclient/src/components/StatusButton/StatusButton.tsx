@@ -1,6 +1,6 @@
 type StatusButtonProps = {
     status: number;
-    onClick?: () => void;
+    onClick: () => void;
 };
 
 export function StatusButton({ status, onClick }: StatusButtonProps) {
@@ -17,7 +17,10 @@ export function StatusButton({ status, onClick }: StatusButtonProps) {
                 borderRadius: "4px",
                 cursor: "pointer",
             }}
-            onClick={onClick}
+            onClick={(e) => {
+                e.stopPropagation();
+                onClick();
+            }}
         >
             {label}
         </button>

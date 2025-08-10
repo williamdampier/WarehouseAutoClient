@@ -9,6 +9,7 @@ export const getOutboundDocuments = (params: {
     docNumbers?: string[];
     resourceIds?: string[];
     unitIds?: string[];
+    customerIds?: string[];
     startDate?: string; // ISO string
     endDate?: string;   // ISO string
 }) => {
@@ -17,6 +18,7 @@ export const getOutboundDocuments = (params: {
     params.docNumbers?.forEach((v) => query.append("docNumbers", v));
     params.resourceIds?.forEach((v) => query.append("resourceIds", v));
     params.unitIds?.forEach((v) => query.append("unitIds", v));
+    params.customerIds?.forEach((v) => query.append("customerIds", v));
     if (params.startDate) query.append("startDate", params.startDate);
     if (params.endDate) query.append("endDate", params.endDate);
 

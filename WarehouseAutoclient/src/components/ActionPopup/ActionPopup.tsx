@@ -33,7 +33,7 @@ function ActionPopup<T extends object>({
     onSave,
     onDelete,
     onArchive,
-    customContent
+    customContent,
 }: ActionPopupProps<T>): React.ReactElement {
     const [loading, setLoading] = useState<"" | "save" | "delete" | "archive">("");
     const [error, setError] = useState("");
@@ -64,14 +64,36 @@ function ActionPopup<T extends object>({
         };
     }, [onClose]);
 
+    const patchFormData = (data: T): T => {
+        const patched = { ...data };
+
+        for (const field of fields) {
+            const value = patched[field.key];
+
+            if ((value === undefined || value === "") && field.type === "select" && field.options?.length) {
+                patched[field.key] = field.options[0].value as T[keyof T];
+            }
+
+        }
+
+        return patched;
+    };
+
+
     const handleAction = async (
         action: "save" | "delete" | "archive",
         fn: (data: T) => Promise<void>
     ) => {
+        let patchedData = formData;
+
+        if (action === "save") {
+            patchedData = patchFormData(formData);
+        }
+
         setLoading(action);
         setError("");
         try {
-            await fn(formData);
+            await fn(patchedData);
             onClose();
         } catch {
             setError(`Failed to ${action} item.`);
@@ -86,7 +108,6 @@ function ActionPopup<T extends object>({
             [key]: value,
         }));
     };
-
 
 
     return (
