@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Customer, Option, OutboundDocument, OutboundResource, Resource, Unit } from "../../app/types";
+import type { FieldConfig, Option, OutboundDocument, OutboundResource } from "../../app/types";
 import { getOutboundDocuments } from "../../app/api/Warehouse/outboundDocumentsApi";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
 import { GridExtended } from "../../components/Grid/GridExtended";
@@ -8,6 +8,8 @@ import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
 import type { HeaderExtended } from "../../components/Grid/GridExtended";
 import { StatusButton } from "../../components/StatusButton/StatusButton";
+import Toast from "../../components/Toast/Toast";
+import ActionPopup from "../../components/ActionPopup/ActionPopup";
 
 
 const formatDate = (iso: string) => {
@@ -17,6 +19,7 @@ const formatDate = (iso: string) => {
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
 };
+
 
 
 
@@ -45,8 +48,17 @@ const OutboundDocsPage = () => {
     // Headers for Grid component
     const headers: HeaderExtended<OutboundDocument>[] = [
         { label: "Номер", accessor: "documentNumber" },
-        { label: "Дата", accessor: "dateShipped" },
-        { label: "Клиент", accessor: "customerId" },
+        {
+            label: "Дата",
+            accessor: "dateShipped",
+            render: (value) =>
+                typeof value === "string" ? <>{formatDate(value)}</> : <>—</>
+        },
+        {
+            label: "Клиент",
+            accessor: "customerId",
+            render: (value) => <>{customers.find((c) => c.id === value)?.name ?? value}</>,
+        },
         {
             label: "Статус",
             accessor: "status",
@@ -57,7 +69,7 @@ const OutboundDocsPage = () => {
     ];
 
 
-
+    const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const showToast = (message: string, type: "success" | "error") => {
         setToast({ message, type });
@@ -77,6 +89,7 @@ const OutboundDocsPage = () => {
 
 
     // Filters state
+    const [selectedDocument, setSelectedDocument] = useState<OutboundDocument | null>(null);
     const [selectedCustomers, setSelectedCustomers] = useState<Option[]>([]);
     const [selectedResources, setSelectedResources] = useState<Option[]>([]);
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([]);
@@ -139,11 +152,93 @@ const OutboundDocsPage = () => {
         setCustomersOptions(customerOptions)
     }, [customers])
 
+    const handleRowClick = async (selectedDoc: OutboundDocument) => {
+        setSelectedDocument(selectedDoc);
+        setPopupMode("edit")
+    };
+
+    const handleClosePopup = () => {
+        setPopupMode(null);
+        setSelectedDocument(null);
+    }
+
+
+    const outboundDocumentFields: FieldConfig<OutboundDocument>[] = [
+        { key: "documentNumber", label: "Номер документа", type: "text" },
+        {
+            key: "customerId",
+            label: "Клиент",
+            type: "select",
+            options: customersOptions,
+        },
+        {
+            key: "dateShipped",
+            label: "Дата отгрузки",
+            type: "date",
+        }
+    ];
+
+
+    const handleCreate = async (newDocument: OutboundDocument) => {
+        try {
+            // Call API to create new document
+            showToast("Отгрузка создана успешно", "success");
+        } catch (error) {
+            console.error("Create Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось создать отгрузку", "error");
+        } finally {
+            setPopupMode(null);
+            refetch();
+        }
+    };
+
+    const handleSave = async (updatedDocument: OutboundDocument) => {
+        try {
+            if (updatedDocument.id) {
+                // Call API to update document
+                showToast("Отгрузка обновлена успешно", "success");
+            } else {
+                console.error("Outbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Update Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось обновить отгрузку", "error");
+        } finally {
+            setPopupMode(null);
+            refetch();
+        }
+    };
+
+    const handleDelete = async (document: OutboundDocument) => {
+        try {
+            if (document.id) {
+                // Call API to delete document
+                showToast("Отгрузка удалена успешно", "success");
+            } else {
+                console.error("Outbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Delete Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось удалить отгрузку", "error");
+        } finally {
+            setPopupMode(null);
+            refetch();
+        }
+    };
+
 
     return (
         <div className="page">
             <h1>Отгрузки</h1>
-
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
             <div className="filters">
                 <div className="filter-group">
                     <label>Период с</label>
@@ -193,27 +288,8 @@ const OutboundDocsPage = () => {
             {(!loading && !error && !unitsError && !resourcesError) &&
                 <GridExtended<OutboundDocument, OutboundResource>
                     rows={enrichedDocuments}
-                    headers={[
-                        { label: "Номер", accessor: "documentNumber" },
-                        {
-                            label: "Дата",
-                            accessor: "dateShipped",
-                            render: (value) =>
-                                typeof value === "string" ? <>{formatDate(value)}</> : <>—</>
-                        },
-                        {
-                            label: "Клиент",
-                            accessor: "customerId",
-                            render: (value) => <>{customers.find((c) => c.id === value)?.name ?? value}</>,
-                        },
-                        {
-                            label: "Статус",
-                            accessor: "status",
-                            render: (value, row) => (
-                                <StatusButton status={value as number} onClick={() => updateStatus(row)} />
-                            ),
-                        },
-                    ]}
+                    onRowClick={handleRowClick}
+                    headers={headers}
                     embeddedAccessor="outboundResources"
                     embeddedHeaders={[
                         {
@@ -231,7 +307,34 @@ const OutboundDocsPage = () => {
                             accessor: "quantity",
                         },
                     ]}
+
+
                 />}
+            {
+                popupMode === "edit" && selectedDocument && (
+                    <ActionPopup<OutboundDocument>
+                        title={`Редактировать: ${selectedDocument.documentNumber}`}
+                        fields={outboundDocumentFields}
+                        data={selectedDocument}
+                        showArchive={false}
+                        onClose={handleClosePopup}
+                        onSave={handleSave}
+                        onDelete={handleDelete}
+                    />
+                )
+            }
+
+            {
+                popupMode === "create" && (
+                    <ActionPopup<OutboundDocument>
+                        title={`Создать: Новая единица измерения`}
+                        fields={outboundDocumentFields}
+                        showArchive={false}
+                        onClose={handleClosePopup}
+                        onSave={handleCreate}
+                    />
+                )
+            }
         </div>
     );
 };

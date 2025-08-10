@@ -104,8 +104,8 @@ function ActionPopup<T extends object>({
                                         disabled={disabled}
                                     >
                                         {options?.map((opt) => (
-                                            <option key={opt} value={opt}>
-                                                {opt}
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
                                             </option>
                                         ))}
                                     </select>
