@@ -73,20 +73,6 @@ const OutboundDocsPage = () => {
         setToast({ message, type });
     };
 
-
-
-    const refetch = useCallback(
-        async (delayMs: number = REFETCH_TIMEOUT) => {
-            if (delayMs > 0) {
-                await new Promise(res => setTimeout(res, delayMs));
-            }
-            refetchUnits();
-            refetchResources();
-            refetchCustomers();
-        },
-        [refetchUnits, refetchResources, refetchCustomers]
-    );
-
     const [documents, setDocuments] = useState<OutboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -134,6 +120,20 @@ const OutboundDocsPage = () => {
     useEffect(() => {
         fetchDocuments();
     }, [fetchDocuments]);
+
+    const refetch = useCallback(
+        async (delayMs: number = REFETCH_TIMEOUT) => {
+            if (delayMs > 0) {
+                await new Promise(res => setTimeout(res, delayMs));
+            }
+            refetchUnits();
+            refetchResources();
+            refetchCustomers();
+            fetchDocuments();
+        },
+        [refetchUnits, refetchResources, refetchCustomers, fetchDocuments]
+    );
+
 
     // Prepare rows for Grid
     const enrichedDocuments: OutboundDocument[] = documents.map((doc) => ({
