@@ -10,63 +10,14 @@ import type { HeaderExtended } from "../../components/Grid/GridExtended";
 import { StatusButton } from "../../components/StatusButton/StatusButton";
 
 
-const docsMock = [{
-    "outboundDocumentId": "01987db2-872a-723a-a29c-6f0ab41924bf",
-    "documentNumber": "outbound2",
-    "customerId": "66f5a092-6877-4f33-a080-498cbbf1940e",
-    "dateShipped": "2025-08-06T04:43:51.403Z",
-    "status": 1,
-    "outboundResources": [
-        {
-            "outboundResourceId": "77b5bb25-7d8c-44a9-b652-d6f280b687a9",
-            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
-            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
-            "quantity": 2
-        },
-        {
-            "outboundResourceId": "80a02750-44e5-4321-aece-8c497d16c6e9",
-            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
-            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
-            "quantity": 2
-        },
-        {
-            "outboundResourceId": "d9d29f4c-028e-4743-a3f1-50d5c78110d0",
-            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
-            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
-            "quantity": 2
-        },
-        {
-            "outboundResourceId": "ef26cbac-8c0f-475b-b77c-b1445928dc2e",
-            "resourceId": "af1d4b2c-0d06-4686-987c-2a00ffa8c39d",
-            "unitId": "e6f99443-c91e-4748-a4a8-fe448cfba0a7",
-            "quantity": 2
-        }
-    ]
-}]
-// Helper to render status button with colors
-const getStatusButton = (statusNum: number) => {
-    const statusMap: Record<number, { label: string; color: string }> = {
-        0: { label: "Unsigned", color: "gray" },
-        1: { label: "Signed", color: "green" },
-        2: { label: "Pending", color: "orange" }, // example additional status
-    };
-    const { label, color } = statusMap[statusNum] ?? { label: "Unknown", color: "gray" };
-    return (
-        <button
-            style={{
-                backgroundColor: color,
-                color: "white",
-                border: "none",
-                padding: "3px 8px",
-                borderRadius: "4px",
-                cursor: "default",
-            }}
-            disabled
-        >
-            {label}
-        </button>
-    );
+const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
 };
+
 
 
 
@@ -173,6 +124,20 @@ const OutboundDocsPage = () => {
             unitName: unitOptions.find((o) => o.value === r.unitId)?.label ?? r.unitId,
         })),
     }));
+    useEffect(() => {
+        const unitOptions: Option[] = units.map((u) => { return { value: u.id || "", label: u.name } })
+        setUnitOptions(unitOptions)
+    }, [units]);
+
+    useEffect(() => {
+        const resourceOptions: Option[] = resources.map((r) => { return { value: r.id || "", label: r.name } })
+        setResourceOptions(resourceOptions)
+    }, [resources])
+
+    useEffect(() => {
+        const customerOptions: Option[] = customers.map((c) => { return { value: c.id || "", label: c.name } })
+        setCustomersOptions(customerOptions)
+    }, [customers])
 
 
     return (
@@ -230,7 +195,12 @@ const OutboundDocsPage = () => {
                     rows={enrichedDocuments}
                     headers={[
                         { label: "Номер", accessor: "documentNumber" },
-                        { label: "Дата", accessor: "dateShipped" },
+                        {
+                            label: "Дата",
+                            accessor: "dateShipped",
+                            render: (value) =>
+                                typeof value === "string" ? <>{formatDate(value)}</> : <>—</>
+                        },
                         {
                             label: "Клиент",
                             accessor: "customerId",
