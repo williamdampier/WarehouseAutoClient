@@ -44,7 +44,7 @@ export interface InboundDocument {
     id?: Guid | null;
     documentNumber: string;
     dateReceived: string; // ISO string
-    resources: InboundResource[];
+    nboundResources: InboundResource[];
 }
 
 export interface OutboundResource {
@@ -63,11 +63,16 @@ export interface OutboundDocument {
     resources: OutboundResource[];
 }
 
+export interface FieldOption {
+    value: string | number;
+    label: string;
+}
+
 export interface FieldConfig<T> {
     key: keyof T;
     label: string;
-    type: "text" | "number" | "select" | "checkbox";
-    options?: string[]; // for select
+    type: "text" | "number" | "select" | "checkbox" | "date";
+    options?: FieldOption[];
     hidden?: boolean;
     disabled?: boolean;
 }

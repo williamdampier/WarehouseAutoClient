@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import "./ActionPopup.css";
-import type { FieldConfig } from "../../app/types";
+import type { Customer, FieldConfig, FieldOption, Resource, Unit } from "../../app/types";
 
 
 
@@ -14,6 +14,11 @@ interface ActionPopupProps<T extends object> {
     onSave: (data: T) => Promise<void>;
     onDelete?: (data: T) => Promise<void>;
     onArchive?: (data: T) => Promise<void>;
+
+    customContent?: (formData: T, handleChange: (key: keyof T, value: unknown) => void) => React.ReactNode;
+    resourceOptions?: Resource[]; // for resourceId
+    unitOptions?: Unit[];     // for unitId
+    customersOptions?: Customer[]; // for customerId
 }
 
 import React from "react";
@@ -28,6 +33,7 @@ function ActionPopup<T extends object>({
     onSave,
     onDelete,
     onArchive,
+    customContent
 }: ActionPopupProps<T>): React.ReactElement {
     const [loading, setLoading] = useState<"" | "save" | "delete" | "archive">("");
     const [error, setError] = useState("");
@@ -81,54 +87,13 @@ function ActionPopup<T extends object>({
         }));
     };
 
+
+
     return (
         <div className="popup-overlay">
             <div className="popup-container" ref={containerRef}>
                 <h2>{title}</h2>
                 {error && <p className="error-text">{error}</p>}
-
-                <div className="form-fields">
-                    {fields.map(({ key, label, type, options, hidden, disabled }) => {
-                        if (hidden) return null;
-
-                        const value = formData?.[key] ?? "";
-
-                        return (
-                            <div key={String(key)} className="form-field">
-                                <label>{label}</label>
-
-                                {type === "select" ? (
-                                    <select
-                                        value={String(value)}
-                                        onChange={(e) => handleChange(key, e.target.value)}
-                                        disabled={disabled}
-                                    >
-                                        {options?.map((opt) => (
-                                            <option key={opt} value={opt}>
-                                                {opt}
-                                            </option>
-                                        ))}
-                                    </select>
-                                ) : type === "checkbox" ? (
-                                    <input
-                                        type="checkbox"
-                                        checked={Boolean(value)}
-                                        onChange={(e) => handleChange(key, e.target.checked)}
-                                        disabled={disabled}
-                                    />
-                                ) : (
-                                    <input
-                                        type={type}
-                                        value={String(value)}
-                                        onChange={(e) => handleChange(key, e.target.value)}
-                                        disabled={disabled}
-                                    />
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-
                 <div className="buttons-container">
                     <button
                         className="apply-button"
@@ -160,6 +125,49 @@ function ActionPopup<T extends object>({
 
                     <button onClick={onClose}>Cancel</button>
                 </div>
+                <div className="form-fields">
+                    {fields.map(({ key, label, type, options, hidden, disabled }) => {
+                        if (hidden) return null;
+
+                        const value = formData?.[key] ?? "";
+
+                        return (
+                            <div key={String(key)} className="form-field">
+                                <label>{label}</label>
+
+                                {type === "select" ? (
+                                    <select
+                                        value={String(value)}
+                                        onChange={(e) => handleChange(key, e.target.value)}
+                                        disabled={disabled}
+                                    >
+                                        {options?.map((opt) => (
+                                            <option key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                ) : type === "checkbox" ? (
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(value)}
+                                        onChange={(e) => handleChange(key, e.target.checked)}
+                                        disabled={disabled}
+                                    />
+                                ) : (
+                                    <input
+                                        type={type}
+                                        value={String(value)}
+                                        onChange={(e) => handleChange(key, e.target.value)}
+                                        disabled={disabled}
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                {customContent?.(formData, handleChange)}
+
             </div>
         </div>
     );

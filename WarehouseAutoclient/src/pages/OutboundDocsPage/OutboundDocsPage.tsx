@@ -1,49 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
-import type { Customer, Option, OutboundDocument, OutboundResource, Resource, Unit } from "../../app/types";
-import type { Header } from "../../components/Grid/Grid";
-import { getOutboundDocuments } from "../../app/api/Warehouse/outboundDocumentsApi";
+import type { FieldConfig, Option, OutboundDocument, OutboundResource } from "../../app/types";
+import { createOutboundDocument, deleteOutboundDocument, getOutboundDocuments, updateOutboundDocument } from "../../app/api/Warehouse/outboundDocumentsApi";
 import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
-import Grid from "../../components/Grid/Grid";
+import { GridExtended } from "../../components/Grid/GridExtended";
 import { useFetchResources } from "../../app/hooks/useFetchResources";
 import { useFetchUnits } from "../../app/hooks/useFetchUnits";
 import { useFetchCustomers } from "../../app/hooks/useFetchCustomers";
+import type { HeaderExtended } from "../../components/Grid/GridExtended";
+import { StatusButton } from "../../components/StatusButton/StatusButton";
+import Toast from "../../components/Toast/Toast";
+import ActionPopup from "../../components/ActionPopup/ActionPopup";
+import ResourceEditorTable from "../../components/ActionPopup/ResourceEditorTable";
 
-// Helper to render status button with colors
-const getStatusButton = (statusNum: number) => {
-    const statusMap: Record<number, { label: string; color: string }> = {
-        0: { label: "Unsigned", color: "gray" },
-        1: { label: "Signed", color: "green" },
-        2: { label: "Pending", color: "orange" }, // example additional status
-    };
-    const { label, color } = statusMap[statusNum] ?? { label: "Unknown", color: "gray" };
-    return (
-        <button
-            style={{
-                backgroundColor: color,
-                color: "white",
-                border: "none",
-                padding: "3px 8px",
-                borderRadius: "4px",
-                cursor: "default",
-            }}
-            disabled
-        >
-            {label}
-        </button>
-    );
+const REFETCH_TIMEOUT = import.meta.env.VITE_REFETCH_TIMEOUT || 300; //default wait 300ms before refetching
+
+const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
 };
-
-// Headers for Grid component
-const headers: Header[] = [
-    { label: "Номер", accessor: "DocumentNumber" },
-    { label: "Дата отгрузки", accessor: "DateShipped" },
-    { label: "Клиент", accessor: "CustomerName" },
-    { label: "Статус", accessor: "StatusButton" },
-    { label: "Ресурсы", accessor: "Resources" },
-    { label: "Единицы измерения", accessor: "Units" },
-    { label: "Количество", accessor: "Quantity" },
-];
-
 
 const OutboundDocsPage = () => {
     const {
@@ -66,44 +43,56 @@ const OutboundDocsPage = () => {
         refetch: refetchCustomers
     } = useFetchCustomers();
 
+    // Headers for Grid component
+    const headers: HeaderExtended<OutboundDocument>[] = [
+        { label: "Номер", accessor: "documentNumber" },
+        {
+            label: "Дата",
+            accessor: "dateShipped",
+            render: (value) =>
+                typeof value === "string" ? <>{formatDate(value)}</> : <>—</>
+        },
+        {
+            label: "Клиент",
+            accessor: "customerId",
+            render: (value) => <>{customers.find((c) => c.id === value)?.name ?? value}</>,
+        },
+        {
+            label: "Статус",
+            accessor: "status",
+            render: (value, row) => (
+                <StatusButton status={value as number} onClick={() => updateStatus(row)} />
+            ),
+        },
+    ];
 
+
+    const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const showToast = (message: string, type: "success" | "error") => {
         setToast({ message, type });
     };
-    const refetch = useCallback(() => {
-        refetchUnits();
-        refetchResources();
-    }, [refetchUnits, refetchResources]);
 
     const [documents, setDocuments] = useState<OutboundDocument[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-
+    function updateStatus(doc: OutboundDocument) {
+        console.log("Updating status for:", doc.id);
+    }
 
 
     // Filters state
+    const [selectedDocument, setSelectedDocument] = useState<OutboundDocument | null>(null);
     const [selectedCustomers, setSelectedCustomers] = useState<Option[]>([]);
     const [selectedResources, setSelectedResources] = useState<Option[]>([]);
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([]);
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
 
-    // Convert Resource and Unit arrays to Option[] for MultiSelect
-    const resourceOptions: Option[] = resources.map((r: Resource) => ({
-        value: r.id ?? r.name, // fallback to Name if Id missing
-        label: r.name,
-    }));
-    const unitOptions: Option[] = units.map((u: Unit) => ({
-        value: u.id ?? u.name,
-        label: u.name,
-    }));
-
-    const customersOptions: Option[] = customers.map((u: Customer) => ({
-        value: u.id ?? u.name,
-        label: u.name,
-    }));
+    const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
+    const [unitOptions, setUnitOptions] = useState<Option[]>([]);
+    const [customersOptions, setCustomersOptions] = useState<Option[]>([]);
 
     // Fetch documents from API
     const fetchDocuments = useCallback(async () => {
@@ -132,52 +121,145 @@ const OutboundDocsPage = () => {
         fetchDocuments();
     }, [fetchDocuments]);
 
-    // Filter by selected customers client-side if needed
-    const filteredDocs = selectedCustomers.length > 0
-        ? documents.filter((doc) => {
-            // Here you need to match doc.CustomerId to selected customers by value (assuming value = customer Id)
-            const selectedCustomerIds = selectedCustomers.map((c) => c.value);
-            return selectedCustomerIds.includes(doc.customerId);
-        })
-        : documents;
+    const refetch = useCallback(
+        async (delayMs: number = REFETCH_TIMEOUT) => {
+            if (delayMs > 0) {
+                await new Promise(res => setTimeout(res, delayMs));
+            }
+            refetchUnits();
+            refetchResources();
+            refetchCustomers();
+            fetchDocuments();
+        },
+        [refetchUnits, refetchResources, refetchCustomers, fetchDocuments]
+    );
+
 
     // Prepare rows for Grid
-    const rows = filteredDocs.map((doc) => {
-        const resourceNames = doc.resources
-            .map((r: OutboundResource) => {
-                const opt = resourceOptions.find((o) => o.value === r.resourceId);
-                return opt ? opt.label : r.resourceId;
-            })
-            .join(", ");
+    const enrichedDocuments: OutboundDocument[] = documents.map((doc) => ({
+        ...doc,
+        customerName: customersOptions.find((c) => c.value === doc.customerId)?.label ?? doc.customerId,
+        resources: (doc.resources ?? []).map((r) => ({
+            ...r,
+            resourceName: resourceOptions.find((o) => o.value === r.resourceId)?.label ?? r.resourceId,
+            unitName: unitOptions.find((o) => o.value === r.unitId)?.label ?? r.unitId,
+        })),
+    }));
 
-        const unitNames = doc.resources
-            .map((r: OutboundResource) => {
-                const opt = unitOptions.find((o) => o.value === r.unitId);
-                return opt ? opt.label : r.unitId;
-            })
-            .join(", ");
+    useEffect(() => {
+        const unitOptions: Option[] = units.map((u) => { return { value: u.id || "", label: u.name } })
+        setUnitOptions(unitOptions)
+    }, [units]);
 
-        const totalQuantity = doc.resources.reduce((sum: number, r: OutboundResource) => sum + r.quantity, 0);
+    useEffect(() => {
+        const resourceOptions: Option[] = resources.map((r) => { return { value: r.id || "", label: r.name } })
+        setResourceOptions(resourceOptions)
+    }, [resources])
 
-        // Find customer name from dummy list or fallback
-        const customer = customersOptions.find((c) => c.value === doc.customerId);
+    useEffect(() => {
+        const customerOptions: Option[] = customers.map((c) => { return { value: c.id || "", label: c.name } })
+        setCustomersOptions(customerOptions)
+    }, [customers])
 
-        return {
-            id: doc.id ?? doc.documentNumber,
-            DocumentNumber: doc.documentNumber,
-            DateShipped: doc.dateShipped.slice(0, 10),
-            CustomerName: customer?.label ?? doc.customerId,
-            StatusButton: getStatusButton(doc.status),
-            Resources: resourceNames,
-            Units: unitNames,
-            Quantity: totalQuantity.toString(),
-        };
-    });
+    const handleRowClick = async (selectedDoc: OutboundDocument) => {
+        console.log("Selected document:", selectedDoc);
+        setSelectedDocument(selectedDoc);
+        setPopupMode("edit")
+    };
+
+    const handleClosePopup = () => {
+        setPopupMode(null);
+        setSelectedDocument(null);
+    }
+
+
+    const outboundDocumentFields: FieldConfig<OutboundDocument>[] = [
+        { key: "documentNumber", label: "Номер документа", type: "text" },
+        {
+            key: "customerId",
+            label: "Клиент",
+            type: "select",
+            options: customersOptions,
+        },
+        {
+            key: "dateShipped",
+            label: "Дата отгрузки",
+            type: "date",
+        }
+    ];
+
+
+    const handleCreate = async (newDocument: OutboundDocument) => {
+        try {
+            await createOutboundDocument(newDocument);
+            showToast("Отгрузка создана успешно", "success");
+        } catch (error) {
+            console.error("Create Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось создать отгрузку", "error");
+        } finally {
+            setPopupMode(null);
+            refetch();
+        }
+    };
+
+    const handleSave = async (updatedDocument: OutboundDocument) => {
+        try {
+            console.log("Saving Outbound Document:", updatedDocument);
+            console.log("JSON Payload:", JSON.stringify(updatedDocument, null, 2));
+            if (updatedDocument.id) {
+                const cleanedResources = updatedDocument.resources?.filter(
+                    (r) => r.resourceId && r.unitId && r.quantity > 0
+                );
+
+                const cleanedDocument = {
+                    ...updatedDocument,
+                    resources: cleanedResources,
+                };
+                await updateOutboundDocument(updatedDocument.id, cleanedDocument);
+                showToast("Отгрузка обновлена успешно", "success");
+            } else {
+                console.error("Outbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Update Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось обновить отгрузку", "error");
+        } finally {
+            setPopupMode(null);
+            refetch();
+        }
+    };
+
+    const handleDelete = async (document: OutboundDocument) => {
+        try {
+            if (document.id) {
+                // Call API to delete document
+                await deleteOutboundDocument(document.id);
+                showToast("Отгрузка удалена успешно", "success");
+            } else {
+                console.error("Outbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Delete Outbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось удалить отгрузку", "error");
+        } finally {
+            setPopupMode(null);
+            refetch();
+        }
+    };
+
 
     return (
         <div className="page">
             <h1>Отгрузки</h1>
-
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
             <div className="filters">
                 <div className="filter-group">
                     <label>Период с</label>
@@ -219,12 +301,83 @@ const OutboundDocsPage = () => {
 
             {(loading || resourcesLoading || unitsLoading || customersLoading) && <p>Загрузка...</p>}
             {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
-            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError}</p>}
-            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {unitsError}</p>}
-            {customersError && <p style={{ color: "red" }}>Ошибка загрузки клиентов: {customersError}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError.message}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {resourcesError.message}</p>}
+            {customersError && <p style={{ color: "red" }}>Ошибка загрузки клиентов: {customersError.message}</p>}
 
 
-            {(!loading && !error && !unitsError && !resourcesError) && <Grid headers={headers} rows={rows} />}
+            {(!loading && !error && !unitsError && !resourcesError) &&
+                <GridExtended<OutboundDocument, OutboundResource>
+                    rows={enrichedDocuments}
+                    onRowClick={handleRowClick}
+                    headers={headers}
+                    embeddedAccessor="resources"
+                    embeddedHeaders={[
+                        {
+                            label: "Ресурс",
+                            accessor: "resourceId",
+                            render: (value) => resources.find((r) => r.id === value)?.name ?? value,
+                        },
+                        {
+                            label: "Единица измерения",
+                            accessor: "unitId",
+                            render: (value) => units.find((u) => u.id === value)?.name ?? value,
+                        },
+                        {
+                            label: "Количество",
+                            accessor: "quantity",
+                        },
+                    ]}
+
+
+                />}
+            {
+                popupMode === "edit" && selectedDocument && (
+                    <ActionPopup<OutboundDocument>
+                        title={`Редактировать: ${selectedDocument.documentNumber}`}
+                        fields={outboundDocumentFields}
+                        data={selectedDocument}
+                        showArchive={false}
+                        onClose={handleClosePopup}
+                        onSave={handleSave}
+                        onDelete={handleDelete}
+                        unitOptions={units}
+                        resourceOptions={resources}
+                        customersOptions={customers}
+                        customContent={(formData, handleChange) => (
+                            <ResourceEditorTable
+                                resources={formData.resources || []}
+                                onChange={(updated) => handleChange("resources", updated)}
+                                unitOptions={units}
+                                resourceOptions={resources}
+                            />
+                        )}
+                    />
+                )
+            }
+
+            {
+                popupMode === "create" && (
+                    <ActionPopup<OutboundDocument>
+                        title={`Создать: Новый документ`}
+                        fields={outboundDocumentFields}
+                        showArchive={false}
+                        onClose={handleClosePopup}
+                        onSave={handleCreate}
+                        unitOptions={units}
+                        resourceOptions={resources}
+                        customersOptions={customers}
+                        customContent={(formData, handleChange) => (
+                            <ResourceEditorTable
+                                resources={formData.resources || []}
+                                onChange={(updated) => handleChange("resources", updated)}
+                                unitOptions={units}
+                                resourceOptions={resources}
+                            />
+                        )}
+                    />
+                )
+            }
         </div>
     );
 };

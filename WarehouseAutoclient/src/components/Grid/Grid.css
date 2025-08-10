@@ -28,3 +28,30 @@
     color: #333333;
     user-select: none;
 }
+
+.grid-embedded-row {
+    background-color: #f9f9f9;
+    border-top: 1px solid #ddd;
+}
+
+.grid-embedded-row:hover {
+    background-color: #eef6ff;
+}
+
+.grid-embedded-row:active {
+    background-color: #d0e7ff;
+}
+
+.grid-parent-cell {
+    vertical-align: top;
+    background-color: #fff;
+    font-weight: 500;
+    padding: 8px;
+}
+
+.grid-parent-cell {
+    vertical-align: top;
+    background-color: #fff;
+    font-weight: 500;
+    padding: 8px;
+}
