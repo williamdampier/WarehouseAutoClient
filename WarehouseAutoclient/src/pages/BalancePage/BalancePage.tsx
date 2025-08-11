@@ -1,75 +1,111 @@
-import { useEffect, useState } from 'react'
-import { MultiSelect } from '../../components/MultiSelect/MultiSelect';
-import Grid from '../../components/Grid/Grid';
-import type { Option } from '../../app/types';
+import { useEffect, useState, useCallback } from "react"
+import type { Balance, BalanceRequest, Option } from "../../app/types"
+import { getBalances } from "../../app/api/Warehouse/balancesApi"
+import { MultiSelect } from "../../components/MultiSelect/MultiSelect"
+import Grid, { type Header } from "../../components/Grid/Grid"
+import { useFetchUnits } from "../../app/hooks/useFetchUnits"
+import { useFetchResources } from "../../app/hooks/useFetchResources"
 
-
-const resources: Option[] = [
-    { value: 'opt1', label: 'Опция 1' },
-    { value: 'opt2', label: 'Опция 2' },
-    { value: 'opt3', label: 'Опция 3' },
-]
-
-const units: Option[] = [
-    { value: 'cat1', label: 'Категория 1' },
-    { value: 'cat2', label: 'Категория 2' },
-    { value: 'cat3', label: 'Категория 3' },
-]
-
-const headers = ["Номер", "Ресурс", "Единица измерения", "Количество"];
-
-const allRows = [
-    { Number: "1", Resource: "Water", Unit: "L", Quantity: "10" },
-    { Number: "2", Resource: "Oil", Unit: "L", Quantity: "5" },
-    { Number: "3", Resource: "Gas", Unit: "kg", Quantity: "20" }
-]
-
-
+const headers: Header[] = [
+    { label: "Ресурс", accessor: "resource" },
+    { label: "Единица Измерения", accessor: "unit" },
+    { label: "Количество", accessor: "quantity" }
+];
 
 const BalancePage = () => {
+    const [balances, setBalances] = useState<Balance[]>([]);
+    const {
+        units,
+        loading: unitsLoading,
+        error: unitsError,
+        refetch: refetchUnits
+    } = useFetchUnits();
+    const {
+        resources,
+        loading: resourcesLoading,
+        error: resourcesError,
+        refetch: refetchResources
+    } = useFetchResources();
+
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
+    const refetch = useCallback(() => {
+        refetchUnits();
+        refetchResources();
+    }, [refetchUnits, refetchResources]);
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [selectedResources, setSelectedResources] = useState<Option[]>([])
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([])
-    const [appliedFilters, setAppliedFilters] = useState<{ resOptions: Option[]; unitOptions: Option[] }>({
-        resOptions: [],
-        unitOptions: [],
+
+    const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
+    const [unitOptions, setUnitOptions] = useState<Option[]>([]);
+
+    // Fetch balances from API with current filters
+    const fetchBalances = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        try {
+            const request: BalanceRequest = {
+                resourceFilterIds: selectedResources.map((r) => r.value),
+                unitFilterIds: selectedUnits.map((u) => u.value),
+            }
+            const data = await getBalances(request)
+            setBalances(data)
+        } catch (error) {
+            console.error("Archive failed:", error);
+            showToast(error instanceof Error ? error.message :
+                "Failed to archive unit", "error");
+
+        } finally {
+            setLoading(false)
+        }
+    }, [selectedResources, selectedUnits])
+
+    // Initial fetch on mount
+    useEffect(() => {
+        fetchBalances()
+    }, [fetchBalances])
+
+    useEffect(() => {
+        const unitOptions: Option[] = units.map((u) => { return { value: u.id || "", label: u.name } })
+        setUnitOptions(unitOptions)
+    }, [units]);
+
+    useEffect(() => {
+        const resourceOptions: Option[] = resources.map((r) => { return { value: r.id || "", label: r.name } })
+        setResourceOptions(resourceOptions)
+    }, [resources])
+
+    // Map API data to grid rows, including resource/unit labels from options
+    const rows = balances.map((bal, index) => {
+        const resourceLabel = resources.find((r) => r.id === bal.resourceId)?.name ?? bal.resourceId
+        const unitLabel = units.find((u) => u.id === bal.unitId)?.name ?? bal.unitId
+        return {
+            id: `${bal.resourceId}_${bal.unitId}_${index}`, // unique id
+            resource: resourceLabel,
+            unit: unitLabel,
+            quantity: bal.quantity.toString(),
+        }
     })
-
-
-    // Заготовка для фильтрации, сейчас просто возвращает все данные
-    const filteredRows = allRows.filter(row => {
-
-        // Фильтр по выбранным ресурсам
-        if (appliedFilters.resOptions.length > 0) {
-            const selectedRes = appliedFilters.resOptions.map(opt => opt.label);
-            if (!selectedRes.includes(row.Resource)) return false;
-        }
-
-        // Фильтр по выбранным единицам измерения
-        if (appliedFilters.unitOptions.length > 0) {
-            const selectedUnitsLabels = appliedFilters.unitOptions.map(opt => opt.label);
-            if (!selectedUnitsLabels.includes(row.Unit)) return false;
-        }
-
-        return true;
-    });
-
-    const handleApply = () => {
-        setAppliedFilters({ resOptions: selectedResources, unitOptions: selectedUnits })
-        // TODO: добавить фильтрацию filteredRows по appliedFilters
-    }
-
-
-
-    useEffect(() => { }, [appliedFilters])
 
     return (
         <div className="page">
             <h1>Баланс</h1>
+            {toast && (
+                <div className={`toast ${toast.type}`}>
+                    {toast.message}
+                    <button onClick={() => setToast(null)}>Закрыть</button>
+                </div>
+            )}
             <div className="filters">
                 <div className="filter-group">
                     <label>Ресурс</label>
                     <MultiSelect
-                        options={resources}
+                        options={resourceOptions}
                         selected={selectedResources}
                         onChange={setSelectedResources}
                         placeholder="Выберите опции"
@@ -79,20 +115,25 @@ const BalancePage = () => {
                 <div className="filter-group">
                     <label>Единица измерения</label>
                     <MultiSelect
-                        options={units}
+                        options={unitOptions}
                         selected={selectedUnits}
                         onChange={setSelectedUnits}
                         placeholder="Выберите категории"
                     />
                 </div>
 
-                <div className="apply-button-container">
-                    <button onClick={handleApply}>Применить</button>
-                </div>
             </div>
-            <Grid headers={headers} rows={filteredRows} />
+
+
+            {(loading || resourcesLoading || unitsLoading) && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError.message}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {resourcesError.message}</p>}
+
+
+            {!loading && !error && <Grid headers={headers} rows={rows} />}
         </div>
     )
 }
 
-export default BalancePage;
+export default BalancePage

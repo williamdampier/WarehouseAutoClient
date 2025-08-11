@@ -1,149 +1,339 @@
+import { useCallback, useEffect, useState } from "react";
+import type { FieldConfig, Option, InboundDocument, InboundResource } from "../../app/types";
+import { createInboundDocument, deleteInboundDocument, getInboundDocuments, updateInboundDocument } from "../../app/api/Warehouse/inboundDocumentsApi";
+import { MultiSelect } from "../../components/MultiSelect/MultiSelect";
+import { GridExtended } from "../../components/Grid/GridExtended";
+import { useFetchResources } from "../../app/hooks/useFetchResources";
+import { useFetchUnits } from "../../app/hooks/useFetchUnits";
+import type { HeaderExtended } from "../../components/Grid/GridExtended";
+import Toast from "../../components/Toast/Toast";
+import ActionPopup from "../../components/ActionPopup/ActionPopup";
+import ResourceEditorTable from "../../components/ActionPopup/ResourceEditorTable";
 
-import { useEffect, useState } from 'react'
-import { MultiSelect } from '../../components/MultiSelect/MultiSelect';
-import Grid, { type Header } from '../../components/Grid/Grid';
-import type { Option } from '../../app/types';
+const REFETCH_TIMEOUT = import.meta.env.VITE_REFETCH_TIMEOUT || 300; //default wait 300ms before refetching
 
-const resources: Option[] = [
-    { value: 'opt1', label: 'Опция 1' },
-    { value: 'opt2', label: 'Опция 2' },
-    { value: 'opt3', label: 'Опция 3' },
-]
-
-const units: Option[] = [
-    { value: 'cat1', label: 'Категория 1' },
-    { value: 'cat2', label: 'Категория 2' },
-    { value: 'cat3', label: 'Категория 3' },
-]
-
-
-const headers: Header[] = [
-    { label: 'Номер', accessor: 'number' },
-    { label: 'Дата', accessor: 'date' },
-    { label: 'Ресурс', accessor: 'resource' },
-    { label: 'Единица измерения', accessor: 'unit' },
-    { label: 'Количество', accessor: 'quantity' }
-];
-
-const allRows = [
-    { Номер: "123", Дата: "2025-08-01", Ресурс: "Опция 1", 'Единица измерения': "Категория 1", Количество: "10" },
-    { Номер: "456", Дата: "2025-08-03", Ресурс: "Опция 2", 'Единица измерения': "Категория 2", Количество: "5" },
-    { Номер: "789", Дата: "2025-08-05", Ресурс: "Опция 3", 'Единица измерения': "Категория 3", Количество: "20" },
-];
+const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+};
 
 const InboundDocsPage = () => {
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [selectedNumbers, setSelectedNumbers] = useState<Option[]>([]);
+    const {
+        units,
+        loading: unitsLoading,
+        error: unitsError,
+        refetch: refetchUnits
+    } = useFetchUnits();
+    const {
+        resources,
+        loading: resourcesLoading,
+        error: resourcesError,
+        refetch: refetchResources
+    } = useFetchResources();
+
+    // Headers for Grid component
+    const headers: HeaderExtended<InboundDocument>[] = [
+        { label: "Номер", accessor: "documentNumber" },
+        {
+            label: "Дата",
+            accessor: "dateReceived",
+            render: (value) =>
+                typeof value === "string" ? <>{formatDate(value)}</> : <>—</>
+        },
+    ];
+
+
+    const [popupMode, setPopupMode] = useState<"edit" | "create" | null>(null);
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const showToast = (message: string, type: "success" | "error") => {
+        setToast({ message, type });
+    };
+
+    const [documents, setDocuments] = useState<InboundDocument[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    // Filters state
+    const [selectedDocument, setSelectedDocument] = useState<InboundDocument | null>(null);
     const [selectedResources, setSelectedResources] = useState<Option[]>([]);
     const [selectedUnits, setSelectedUnits] = useState<Option[]>([]);
-    const [appliedFilters, setAppliedFilters] = useState<{
-        numOptions: Option[],
-        resOptions: Option[],
-        unitOptions: Option[]
-    }>({
-        numOptions: [],
-        resOptions: [],
-        unitOptions: [],
-    });
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+
+    const [resourceOptions, setResourceOptions] = useState<Option[]>([]);
+    const [unitOptions, setUnitOptions] = useState<Option[]>([]);
 
 
-    const handleAdd = () => {
-        console.log("Добавить новый документ");
-        // Можно добавить открытие модального окна или переход на страницу создания
+    // Fetch documents from API
+    const fetchDocuments = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const params = {
+                startDate: startDate || undefined,
+                endDate: endDate || undefined,
+                resourceIds: selectedResources.map((r) => r.value),
+                unitIds: selectedUnits.map((u) => u.value),
+            };
+            const data = await getInboundDocuments(params);
+            setDocuments(data);
+        } catch (e: unknown) {
+            if (e instanceof Error) setError(e.message);
+            else setError("Неизвестная ошибка");
+        } finally {
+            setLoading(false);
+        }
+    }, [startDate, endDate, selectedResources, selectedUnits]);
+
+    // Refresh data when filters change
+    useEffect(() => {
+        fetchDocuments();
+    }, [fetchDocuments]);
+
+    const refetch = useCallback(
+        async (delayMs: number = REFETCH_TIMEOUT) => {
+            if (delayMs > 0) {
+                await new Promise(res => setTimeout(res, delayMs));
+            }
+            refetchUnits();
+            refetchResources();
+            fetchDocuments();
+        },
+        [refetchUnits, refetchResources, fetchDocuments]
+    );
+
+
+    // Prepare rows for Grid
+    const enrichedDocuments: InboundDocument[] = documents.map((doc) => ({
+        ...doc,
+        resources: (doc.resources ?? []).map((r) => ({
+            ...r,
+            resourceName: resourceOptions.find((o) => o.value === r.resourceId)?.label ?? r.resourceId,
+            unitName: unitOptions.find((o) => o.value === r.unitId)?.label ?? r.unitId,
+        })),
+    }));
+
+    useEffect(() => {
+        const unitOptions: Option[] = units.map((u) => { return { value: u.id || "", label: u.name } })
+        setUnitOptions(unitOptions)
+    }, [units]);
+
+    useEffect(() => {
+        const resourceOptions: Option[] = resources.map((r) => { return { value: r.id || "", label: r.name } })
+        setResourceOptions(resourceOptions)
+    }, [resources])
+
+    const handleRowClick = async (selectedDoc: InboundDocument) => {
+        console.log("Selected document:", selectedDoc);
+        setSelectedDocument(selectedDoc);
+        setPopupMode("edit")
     };
 
-    const handleApply = () => {
-        setAppliedFilters({
-            numOptions: selectedNumbers,
-            resOptions: selectedResources,
-            unitOptions: selectedUnits,
-        });
+    const handleClosePopup = () => {
+        setPopupMode(null);
+        setSelectedDocument(null);
+    }
+
+
+    const inboundDocumentFields: FieldConfig<InboundDocument>[] = [
+        { key: "documentNumber", label: "Номер документа", type: "text" },
+        {
+            key: "dateReceived",
+            label: "Дата поступления",
+            type: "date",
+        }
+    ];
+
+
+    const handleCreate = async (newDocument: InboundDocument) => {
+        try {
+            await createInboundDocument(newDocument);
+            showToast("Отгрузка создана успешно", "success");
+        } catch (error) {
+            console.error("Create Inbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось создать отгрузку", "error");
+        } finally {
+            setSelectedDocument(null);
+            setPopupMode(null);
+            refetch();
+        }
     };
 
-    const filteredRows = allRows.filter(row => {
-        // Фильтр по дате
-        if (startDate && row['Дата'] < startDate) return false;
-        if (endDate && row['Дата'] > endDate) return false;
+    const handleSave = async (updatedDocument: InboundDocument) => {
+        try {
+            if (updatedDocument.id) {
+                const cleanedResources = updatedDocument.resources?.filter(
+                    (r) => r.resourceId && r.unitId && r.quantity > 0
+                );
 
-        // Фильтр по выбранным номерам (если есть выбор)
-        if (appliedFilters.numOptions.length > 0) {
-            const selectedNums = appliedFilters.numOptions.map(opt => opt.label);
-            if (!selectedNums.includes(row['Номер'])) return false;
+                const cleanedDocument = {
+                    ...updatedDocument,
+                    resources: cleanedResources,
+                };
+                await updateInboundDocument(updatedDocument.id, cleanedDocument);
+                showToast("Отгрузка обновлена успешно", "success");
+            } else {
+                console.error("Inbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Update Inbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось обновить отгрузку", "error");
+        } finally {
+            setSelectedDocument(null);
+            setPopupMode(null);
+            refetch();
         }
+    };
 
-        // Фильтр по выбранным ресурсам
-        if (appliedFilters.resOptions.length > 0) {
-            const selectedRes = appliedFilters.resOptions.map(opt => opt.label);
-            if (!selectedRes.includes(row['Ресурс'])) return false;
+    const handleDelete = async (document: InboundDocument) => {
+        try {
+            if (document.id) {
+                // Call API to delete document
+                await deleteInboundDocument(document.id);
+                showToast("Отгрузка удалена успешно", "success");
+            } else {
+                console.error("Inbound Document id is missing.");
+                showToast("Отсутствует идентификатор отгрузки.", "error");
+            }
+        } catch (error) {
+            console.error("Delete Inbound Document failed:", error);
+            showToast(error instanceof Error ? error.message : "Не удалось удалить отгрузку", "error");
+        } finally {
+            setSelectedDocument(null);
+            setPopupMode(null);
+            refetch();
         }
+    };
 
-        // Фильтр по выбранным единицам измерения
-        if (appliedFilters.unitOptions.length > 0) {
-            const selectedUnitsLabels = appliedFilters.unitOptions.map(opt => opt.label);
-            if (!selectedUnitsLabels.includes(row['Единица измерения'])) return false;
-        }
-
-        return true;
-    });
-
-    useEffect(() => { }, [appliedFilters])
 
     return (
         <div className="page">
             <h1>Поступления</h1>
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
+            <div className="buttons-container">
+                <button
+                    className="apply-button"
+                    onClick={() => setPopupMode("create")}
+                >
+                    Добавить
+                </button>
+            </div>
             <div className="filters">
                 <div className="filter-group">
-                    <label>Период</label>
-                    <input
-                        type="date"
-                        className="date-input"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                    />
-                    <input
-                        type="date"
-                        className="date-input"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                    />
-                </div>
-                <div className="filter-group">
-                    <label>Номер поступления</label>
-                    <MultiSelect
-                        options={resources}
-                        selected={selectedNumbers}
-                        onChange={setSelectedNumbers}
-                        placeholder="Выберите номера"
-                    />
+                    <label>Период с</label>
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                    <label>по</label>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
                 </div>
                 <div className="filter-group">
                     <label>Ресурсы</label>
                     <MultiSelect
-                        options={resources}
+                        options={resourceOptions}
                         selected={selectedResources}
                         onChange={setSelectedResources}
                         placeholder="Выберите ресурсы"
                     />
                 </div>
+
                 <div className="filter-group">
                     <label>Единицы измерения</label>
                     <MultiSelect
-                        options={units}
+                        options={unitOptions}
                         selected={selectedUnits}
                         onChange={setSelectedUnits}
                         placeholder="Выберите единицы"
                     />
                 </div>
-
-                <div className="buttons-container">
-                    <button className="apply-button" onClick={handleApply}>Применить</button>
-                    <button className="add-button" onClick={handleAdd}>Добавить</button>
-                </div>
             </div>
-            <Grid headers={headers} rows={filteredRows} />
+
+            {(loading || resourcesLoading || unitsLoading) && <p>Загрузка...</p>}
+            {error && <p style={{ color: "red" }}>Ошибка: {error}</p>}
+            {unitsError && <p style={{ color: "red" }}>Ошибка загрузки единиц: {unitsError.message}</p>}
+            {resourcesError && <p style={{ color: "red" }}>Ошибка загрузки ресурса {resourcesError.message}</p>}
+
+
+            {(!loading && !error && !unitsError && !resourcesError) &&
+                <GridExtended<InboundDocument, InboundResource>
+                    rows={enrichedDocuments}
+                    onRowClick={handleRowClick}
+                    headers={headers}
+                    embeddedAccessor="resources"
+                    embeddedHeaders={[
+                        {
+                            label: "Ресурс",
+                            accessor: "resourceId",
+                            render: (value) => resources.find((r) => r.id === value)?.name ?? value,
+                        },
+                        {
+                            label: "Единица измерения",
+                            accessor: "unitId",
+                            render: (value) => units.find((u) => u.id === value)?.name ?? value,
+                        },
+                        {
+                            label: "Количество",
+                            accessor: "quantity",
+                        },
+                    ]}
+
+
+                />}
+            {
+                popupMode === "edit" && selectedDocument && (
+                    <ActionPopup<InboundDocument>
+                        title={`Редактировать: ${selectedDocument.documentNumber}`}
+                        fields={inboundDocumentFields}
+                        data={selectedDocument}
+                        showArchive={false}
+                        onClose={handleClosePopup}
+                        onSave={handleSave}
+                        onDelete={handleDelete}
+                        unitOptions={units}
+                        resourceOptions={resources}
+                        customContent={(formData, handleChange) => (
+                            <ResourceEditorTable
+                                resources={formData.resources || []}
+                                onChange={(updated) => handleChange("resources", updated)}
+                                unitOptions={units}
+                                resourceOptions={resources}
+                            />
+                        )}
+                    />
+                )
+            }
+
+            {
+                popupMode === "create" && (
+                    <ActionPopup<InboundDocument>
+                        title={`Создать: Новый документ`}
+                        fields={inboundDocumentFields}
+                        showArchive={false}
+                        onClose={handleClosePopup}
+                        onSave={handleCreate}
+                        unitOptions={units}
+                        resourceOptions={resources}
+                        customContent={(formData, handleChange) => (
+                            <ResourceEditorTable
+                                resources={formData.resources || []}
+                                onChange={(updated) => handleChange("resources", updated)}
+                                unitOptions={units}
+                                resourceOptions={resources}
+                            />
+                        )}
+                    />
+                )
+            }
         </div>
-    )
-}
+    );
+};
 
 export default InboundDocsPage;
