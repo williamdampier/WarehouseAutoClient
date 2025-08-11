@@ -212,7 +212,7 @@ const InboundDocsPage = () => {
 
     return (
         <div className="page">
-            <h1>Отгрузки</h1>
+            <h1>Поступления</h1>
             {toast && (
                 <Toast
                     message={toast.message}
